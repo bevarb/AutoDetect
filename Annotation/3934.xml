@@ -1,0 +1,26 @@
+<annotation>
+	<folder>class_8</folder>
+	<filename>95.tif</filename>
+	<path>D:\Project_Data\First\Clear_data\class_8\95.tif</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>843</width>
+		<height>603</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>2843.6</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>34</xmin>
+			<ymin>1</ymin>
+			<xmax>501</xmax>
+			<ymax>603</ymax>
+		</bndbox>
+	</object>
+</annotation>

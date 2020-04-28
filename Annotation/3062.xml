@@ -1,0 +1,26 @@
+<annotation>
+	<folder>class_5</folder>
+	<filename>4500.tif</filename>
+	<path>D:\Project_Data\First\Clear_data\class_5\4500.tif</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>843</width>
+		<height>603</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>2842</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>392</xmin>
+			<ymin>39</ymin>
+			<xmax>783</xmax>
+			<ymax>582</ymax>
+		</bndbox>
+	</object>
+</annotation>

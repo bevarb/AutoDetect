@@ -1,0 +1,26 @@
+<annotation>
+	<folder>class_0</folder>
+	<filename>147.tif</filename>
+	<path>D:\Program_Data\First\clear_data\class_0\147.tif</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>843</width>
+		<height>603</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>2837</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>426</xmin>
+			<ymin>145</ymin>
+			<xmax>745</xmax>
+			<ymax>502</ymax>
+		</bndbox>
+	</object>
+</annotation>

@@ -1,0 +1,26 @@
+<annotation>
+	<folder>class_13</folder>
+	<filename>2944.tif</filename>
+	<path>D:\Project_Data\First\Clear_data\class_13\2944.tif</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>843</width>
+		<height>603</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>2838.6</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>32</xmin>
+			<ymin>2</ymin>
+			<xmax>435</xmax>
+			<ymax>484</ymax>
+		</bndbox>
+	</object>
+</annotation>
