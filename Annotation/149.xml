@@ -1,5 +1,5 @@
-<annotation>
-	<folder>class_0</folder>
+<?xml version="1.0" ?><annotation>
+	<folder>VOC2007</folder>
 	<filename>373.tif</filename>
 	<path>D:\Program_Data\First\clear_data\class_0\373.tif</path>
 	<source>
@@ -12,7 +12,7 @@
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>2837</name>
+		<name>nano</name>
 		<pose>Unspecified</pose>
 		<truncated>1</truncated>
 		<difficult>0</difficult>
@@ -24,7 +24,7 @@
 		</bndbox>
 	</object>
 	<object>
-		<name>2837</name>
+		<name>nano</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
 		<difficult>0</difficult>

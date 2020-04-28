@@ -3,7 +3,7 @@ import os
 import os.path
 import xml.dom.minidom
 
-path = "/home/zhangxin/faster-rcnn.pytorch/data/VOCdevkit/VOC2007/Annotations/"
+path = "/home/user/wangxu_data/code/2-AutoDetect/AutoDetect/Annotation/"
 files = os.listdir(path)  # 得到文件夹下所有文件名称
 
 for xmlFile in files:  # 遍历文件夹
@@ -20,7 +20,7 @@ for xmlFile in files:  # 遍历文件夹
         # 对每个xml文件的多个同样的属性值进行修改。此处将每一个<name>属性修改为plane,每一个<folder>属性修改为VOC2007
         for i in range(len(name)):
             print(name[i].firstChild.data)
-            name[i].firstChild.data = 'plane'
+            name[i].firstChild.data = 'nano'
             print(name[i].firstChild.data)
 
         for i in range(len(folder)):

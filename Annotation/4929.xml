@@ -1,5 +1,5 @@
-<annotation>
-	<folder>class_11</folder>
+<?xml version="1.0" ?><annotation>
+	<folder>VOC2007</folder>
 	<filename>395.tif</filename>
 	<path>D:\Project_Data\First\Clear_data\class_11\395.tif</path>
 	<source>
@@ -12,7 +12,7 @@
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>dog</name>
+		<name>nano</name>
 		<pose>Unspecified</pose>
 		<truncated>1</truncated>
 		<difficult>0</difficult>
