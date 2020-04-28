@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/pytorch-faster-rcnn" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/pytorch-faster-rcnn/data/coco" vcs="Git" />
   </component>
 </project>
