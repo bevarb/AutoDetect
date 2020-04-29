@@ -1,7 +1,7 @@
-<?xml version="1.0" ?><annotation>
-	<folder>VOC2007</folder>
-	<filename>290.tif</filename>
-	<path>D:\Program_Data\First\Clear_data\class_1\290.tif</path>
+<annotation>
+	<folder>class_1</folder>
+	<filename>1269.tif</filename>
+	<path>D:\Project_Data\First\Clear_data\class_1\1269.tif</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -12,15 +12,15 @@
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>nano</name>
+		<name>2838</name>
 		<pose>Unspecified</pose>
 		<truncated>1</truncated>
 		<difficult>0</difficult>
 		<bndbox>
-			<xmin>120</xmin>
+			<xmin>1</xmin>
 			<ymin>1</ymin>
-			<xmax>517</xmax>
-			<ymax>171</ymax>
+			<xmax>491</xmax>
+			<ymax>516</ymax>
 		</bndbox>
 	</object>
 </annotation>
