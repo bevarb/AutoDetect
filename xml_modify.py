@@ -3,7 +3,7 @@ import os
 import os.path
 import xml.dom.minidom
 
-path = "/home/user/wangxu_data/code/2-AutoDetect/AutoDetect/Annotation/"
+path = "/home/user/wangxu_data/code/2-AutoDetect/pytorch-faster-rcnn/data/VOCdevkit2007/VOC2007/Annotations"
 files = os.listdir(path)  # 得到文件夹下所有文件名称
 
 for xmlFile in files:  # 遍历文件夹
