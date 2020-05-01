@@ -10,6 +10,7 @@ model = init_detector(config_file, checkpoint_file)
 # 测试一张图片
 img = 'test1.tif'
 result = inference_detector(model, img)
+print(result)
 show_result(img, result, model.CLASSES)
 
 # # 测试一系列图片
