@@ -1,0 +1,26 @@
+<?xml version="1.0" ?><annotation>
+	<folder>VOC2007</folder>
+	<filename>1322.tif</filename>
+	<path>D:\Project_Data\First\Clear_data\class_4\1322.tif</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>843</width>
+		<height>603</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>nano</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>264</xmin>
+			<ymin>64</ymin>
+			<xmax>654</xmax>
+			<ymax>593</ymax>
+		</bndbox>
+	</object>
+</annotation>
