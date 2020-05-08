@@ -1,0 +1,25 @@
+<annotation>
+	<folder>VOC2007</folder>
+	<filename>6.tif</filename>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>843</width>
+		<height>603</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>nano</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>1</difficult>
+		<bndbox>
+			<xmin>414</xmin>
+			<ymin>129</ymin>
+			<xmax>771</xmax>
+			<ymax>536</ymax>
+		</bndbox>
+	</object>
+</annotation>

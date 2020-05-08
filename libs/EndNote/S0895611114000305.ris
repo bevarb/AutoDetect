@@ -1,0 +1,25 @@
+TY  - JOUR
+T1  - Segmentation of cytoplasm and nuclei of abnormal cells in cervical cytology using global and local graph cuts
+AU  - Zhang, Ling
+AU  - Kong, Hui
+AU  - Chin, Chien Ting
+AU  - Liu, Shaoxiong
+AU  - Chen, Zhi
+AU  - Wang, Tianfu
+AU  - Chen, Siping
+JO  - Computerized Medical Imaging and Graphics
+VL  - 38
+IS  - 5
+SP  - 369
+EP  - 380
+PY  - 2014
+DA  - 2014/07/01/
+SN  - 0895-6111
+DO  - https://doi.org/10.1016/j.compmedimag.2014.02.001
+UR  - http://www.sciencedirect.com/science/article/pii/S0895611114000305
+KW  - Abnormal cells
+KW  - Cervical cell segmentation
+KW  - Graph cut-based segmentation
+KW  - Touching-nuclei splitting
+AB  - Automation-assisted reading (AAR) techniques have the potential to reduce errors and increase productivity in cervical cancer screening. The sensitivity of AAR relies heavily on automated segmentation of abnormal cervical cells, which is handled poorly by current segmentation algorithms. In this paper, a global and local scheme based on graph cut approach is proposed to segment cervical cells in images with a mix of healthy and abnormal cells. For cytoplasm segmentation, the multi-way graph cut is performed globally on the a* channel enhanced image, which can be effective when the image histogram presents a non-bimodal distribution. For segmentation of nuclei, especially when they are abnormal, we propose to use graph cut adaptively and locally, which allows the combination of intensity, texture, boundary and region information. Two concave points-based approaches are integrated to split the touching-nuclei. As part of an ongoing clinical trial, preliminary validation results obtained from 21 cervical cell images with non-ideal imaging condition and pathology show that our segmentation method achieved 93% accuracy for cytoplasm, and 88.4% F-measure for abnormal nuclei, outperforming state of the art methods in terms of accuracy. Our method has the potential to improve the sensitivity of AAR in screening for cervical cancer.
+ER  - 
