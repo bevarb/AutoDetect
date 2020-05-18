@@ -40,7 +40,6 @@ from libs.labelDialog import LabelDialog
 from libs.colorDialog import ColorDialog
 from libs.labelFile import LabelFile, LabelFileError
 from libs.toolBar import ToolBar
-from libs.pascal_voc_io import PascalVocWriter
 from libs.pascal_voc_io import PascalVocReader
 from libs.pascal_voc_io import XML_EXT
 from libs.yolo_io import YoloReader
@@ -609,16 +608,9 @@ class MainWindow(QMainWindow, WindowMixin):
     def detect_(self):
         filt = 'modelFile(*.pth)'
         model_name, filtUsed = QFileDialog.getOpenFileName(None, "选择文件", "C:/", filt)
-        nano = detect(model_name)
-        bboxs, ids, img_size = nano.dir(self.dirname)
-        for i in range(len(bboxs)):
-            filename = ids[i] + ".tif"
-            xmlwriter = PascalVocWriter("VOC2007", filename, img_size)
-            for box in bboxs[i]:
-                xmlwriter.addBndBox(box[0], box[1], box[2], box[3], "nano", "0")
-            xmlwriter.save(self.defaultSaveDir + "/" + ids[i] + ".xml")
-        print(bboxs)
-        print(ids)
+        nano = detect(model_name,self.defaultSaveDir)
+        nano.dir(self.dirname)
+
         # self.defaultSaveDir
 
 
