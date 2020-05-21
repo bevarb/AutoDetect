@@ -3,21 +3,30 @@ import numpy as np
 import os
 import cv2
 from libs.pascal_voc_io import PascalVocWriter
+from PyQt5.QtCore import *
 # 首先下载模型文件https://s3.ap-northeast-2.amazonaws.com/open-mmlab/mmdetection/models/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth
-class detect():
-    def __init__(self, model_name, defaultSaveDir):
-        config_file = "/home/user/wangxu_data/code/2-AutoDetect/mmdetection/configs/faster_rcnn_r50_fpn_1x.py"
-        # config_file = 'libs/detect/configs/faster_rcnn_r50_fpn_1x.py'
-        checkpoint_file = model_name
+class detect(QThread):
+    progressBarValue = pyqtSignal(int)
+    def __init__(self, model_path, config_path, defaultSaveDir, dirname, parent=None):
+        super(detect, self).__init__()
+        config_file = config_path
+        checkpoint_file = model_path
         # 初始化模型
         self.model = init_detector(config_file, checkpoint_file)
         self.defaultSaveDir = defaultSaveDir
-    def dir(self, dirname):
+        self.dirname = dirname
+        self.quick_flag = 0
+    def __del__(self):
+        self.wait()
+
+    def run(self):
         # 测试一张图片
+        dirname = self.dirname
         imgs = os.listdir(dirname)
         if imgs is not None:
             imgs = sorted(imgs, key=lambda x: int(x.split('/')[-1].split('.')[0]))
             img_size = cv2.imread(dirname + "/" + imgs[0]).shape
+            flag = 0
             for img in imgs:
                 print(img)
                 path = dirname + "/" + img
@@ -42,6 +51,12 @@ class detect():
                 for box in newbbox:
                     xmlwriter.addBndBox(box[0], box[1], box[2], box[3], "nano", "0")
                 xmlwriter.save(self.defaultSaveDir + "/" + id + ".xml")
+                flag += 1
+                if self.quick_flag == 1:
+                    break
+                prograssbar_value = round(flag / len(imgs), 2) * 100
+                self.progressBarValue.emit(prograssbar_value)
+
 
 
     def check_bbox(self, all_bbox):
@@ -60,6 +75,10 @@ class detect():
             if i not in flag:
                 new_bbox.append(all_bbox[i])
         return new_bbox
+
+    def set_quick_flag(self, i):
+        self.quick_flag = i
+
 
 
 

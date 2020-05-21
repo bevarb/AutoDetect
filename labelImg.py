@@ -47,6 +47,7 @@ from libs.yolo_io import TXT_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
 from libs.nanodetect import detect
+from libs.nanotrack import track
 __appname__ = 'labelImg'
 
 
@@ -358,10 +359,19 @@ class MainWindow(QMainWindow, WindowMixin):
             recentFiles=QMenu('Open &Recent'),
             labelList=labelMenu)
         # Detect:
+        self.get_SubImg_Action = QAction(QIcon('resources/icons/open.png'), '&Get Sub Image', self)
         self.detect_Action = QAction(QIcon('resources/icons/open.png'), '&Detect', self)
+        self.track_Action = QAction(QIcon('resources/icons/open.png'), '&Track', self)
+        self.figure_DwellTime_Action = QAction(QIcon('resources/icons/open.png'), '&Figure Dwell time', self)
+        self.get_SubImg_Action.triggered.connect(self.get_SubImg_)
         self.detect_Action.triggered.connect(self.detect_)
+        self.track_Action.triggered.connect(self.track_)
+        self.figure_DwellTime_Action.triggered.connect(self.figure_DwellTime_)
         self.detect_Menu = self.menuBar().addMenu('&Detect')
+        self.detect_Menu.addAction(self.get_SubImg_Action)
         self.detect_Menu.addAction(self.detect_Action)
+        self.detect_Menu.addAction(self.track_Action)
+        self.detect_Menu.addAction(self.figure_DwellTime_Action)
 
         # Auto saving : Enable auto saving if pressing next
         self.autoSaving = QAction(getStr('autoSaveMode'), self)
@@ -605,13 +615,55 @@ class MainWindow(QMainWindow, WindowMixin):
             self.recentFiles.pop()
         self.recentFiles.insert(0, filePath)
 
-    def detect_(self):
-        filt = 'modelFile(*.pth)'
-        model_name, filtUsed = QFileDialog.getOpenFileName(None, "选择文件", "C:/", filt)
-        nano = detect(model_name,self.defaultSaveDir)
-        nano.dir(self.dirname)
+    def get_SubImg_(self):
+        '''TODO:增加设置栏目，可以更改更新数量以及'''
+        directory = QFileDialog.getExistingDirectory(None, "选择文件夹", "./")
+        self.Raw_Dir = directory
+        dirname = QFileDialog.getExistingDirectory(None, "选择文件夹", "./")
+        self.dirname = dirname
+        from libs.get_ClearImg import get_ClearImg
+        if self.Raw_Dir == None:
+            pass
+        else:
+            self.get_ClearImg = get_ClearImg(self.Raw_Dir, self.dirname, 500)
+            from libs.prograssbar import proBar
+            self.proBar = proBar()
+            self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
+            self.proBar.quick_sig.connect(self.get_ClearImg.set_quick_flag)
+            self.get_ClearImg.start()
+            self.proBar.start()
 
-        # self.defaultSaveDir
+
+    def detect_(self):
+        '''TODO:增加设置栏目，可以更改配置文件和模型文件'''
+        # filt = 'modelFile(*.pth)'
+        # model_name, filtUsed = QFileDialog.getOpenFileName(None, "选择文件", "C:/", filt)
+        self.config_path = "libs/detect/configs/faster_rcnn_r50_fpn_1x.py"
+        self.model_path = "work_dirs/90%Detect/latest.pth"
+        from libs.prograssbar import proBar
+        self.proBar = proBar()
+        self.nano = detect(self.model_path, self.config_path, self.defaultSaveDir, self.dirname)
+        self.nano.progressBarValue.connect(self.proBar.set_value)
+        self.proBar.quick_sig.connect(self.nano.set_quick_flag)
+        self.nano.start()
+        self.proBar.start()
+
+    def track_(self):
+        self.paticle_track = track(self.defaultSaveDir)
+        from libs.prograssbar import proBar
+        self.proBar = proBar()
+        self.paticle_track.progressBarValue.connect(self.proBar.set_value)
+        self.proBar.quick_sig.connect(self.paticle_track.set_quick_flag)
+        self.paticle_track.start()
+        self.proBar.start()
+        self.have_tracked = self.paticle_track.over_tracked()
+
+    def figure_DwellTime_(self):
+        '''TODO:暂未将追踪结果写入文件，方便读取'''
+        all = self.have_tracked
+        from libs.figure_DwellTime import figure_DwellTime
+        fig = figure_DwellTime(all)
+        fig.start()
 
 
     def beginner(self):
@@ -1495,6 +1547,18 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def toogleDrawSquare(self):
         self.canvas.setDrawingShapeToSquare(self.drawSquaresOption.isChecked())
+
+    def closeEvent(self, QCloseEvent):
+        reply = QMessageBox.question(self,
+                                     'Attention',
+                                     'If you want to exit ?',
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            QCloseEvent.accept()
+        else:
+            QCloseEvent.ignore()
+
 
 
 def inverted(color):

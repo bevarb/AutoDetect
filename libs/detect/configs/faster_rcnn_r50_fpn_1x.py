@@ -38,7 +38,7 @@ model = dict(
         in_channels=256,
         fc_out_channels=1024,
         roi_feat_size=7,
-        num_classes=81,
+        num_classes=2,
         target_means=[0., 0., 0., 0.],
         target_stds=[0.1, 0.1, 0.2, 0.2],
         reg_class_agnostic=False,
@@ -106,7 +106,7 @@ img_norm_cfg = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='Resize', img_scale=(843, 603), keep_ratio=True),
+    dict(type='Resize', img_scale=(525, 513), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -117,7 +117,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(843, 603),
+        img_scale=(525, 513),
         flip=False,
         transforms=[
             dict(type='Resize', keep_ratio=True),
@@ -149,6 +149,7 @@ data = dict(
 evaluation = dict(interval=1, metric='bbox')
 # optimizer
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+# optimizer = dict(type='Adam', lr=0.005, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -167,10 +168,10 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 6
+total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/detect'
+work_dir = './work_dirs/NewDetect'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
