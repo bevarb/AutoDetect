@@ -1,9 +1,12 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 class set_SubImg(QThread):
-    set_SubImg_sig = pyqtSignal(int, int)
-    def __init__(self, parent=None):
+    set_SubImg_sig = pyqtSignal(int, int, int)
+    def __init__(self, method=0, T=500, Step=1, parent=None):
         super(set_SubImg, self).__init__()
+        self.method = method
+        self.T = T
+        self.Step = Step
     def __del__(self):
         self.wait()
 
@@ -18,8 +21,8 @@ class set_SubImg(QThread):
         self.cob1 = QComboBox()
         self.cob1.addItem("减第一帧")
         self.cob1.addItem("逐帧相减")
+        self.cob1.setCurrentIndex(self.method)
         self.cob1.currentIndexChanged.connect(self.cob_change)
-        self.cob1.setCurrentIndex(0)
         layout1.addWidget(lable1)
         layout1.addWidget(self.cob1)
         Wid1 = QWidget()
@@ -27,23 +30,32 @@ class set_SubImg(QThread):
 
         layout2 = QHBoxLayout()
         lable2 = QLabel("刷新周期：")
-        self.lineedit2 = QLineEdit("500")
+        self.lineedit2 = QLineEdit(str(self.T))
         layout2.addWidget(lable2)
         layout2.addWidget(self.lineedit2)
         Wid2 = QWidget()
         Wid2.setLayout(layout2)
 
         layout3 = QHBoxLayout()
-        ok_btn = QPushButton("确定")
-        cancle_btn = QPushButton("取消")
-        layout3.addWidget(ok_btn)
-        layout3.addWidget(cancle_btn)
+        lable3 = QLabel("步长：")
+        self.lineedit3 = QLineEdit(str(self.Step))
+        layout3.addWidget(lable3)
+        layout3.addWidget(self.lineedit3)
         Wid3 = QWidget()
         Wid3.setLayout(layout3)
+
+        layout4 = QHBoxLayout()
+        ok_btn = QPushButton("确定")
+        cancle_btn = QPushButton("取消")
+        layout4.addWidget(ok_btn)
+        layout4.addWidget(cancle_btn)
+        Wid4 = QWidget()
+        Wid4.setLayout(layout4)
 
         layout.addWidget(Wid1)
         layout.addWidget(Wid2)
         layout.addWidget(Wid3)
+        layout.addWidget(Wid4)
         self.dialog.setLayout(layout)
         self.dialog.show()
         ok_btn.clicked.connect(self.dialog.close)
@@ -61,7 +73,7 @@ class set_SubImg(QThread):
             else:
                 method = 1
             if len(self.lineedit2.text()) != 0:
-                self.set_SubImg_sig.emit(method, int(self.lineedit2.text()))
+                self.set_SubImg_sig.emit(method, int(self.lineedit2.text()), int(self.lineedit3.text()))
 
     def cob_change(self, text):
         if text == 1:

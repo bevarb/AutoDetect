@@ -642,12 +642,14 @@ class MainWindow(QMainWindow, WindowMixin):
         self.set_SubImg.set_SubImg_sig.connect(self.receive_SubImg_sig)
         self.set_SubImg.start()
 
-    def receive_SubImg_sig(self, method, T):
+    def receive_SubImg_sig(self, method, T, Step):
         self.SubImg_method = method
         self.SubImg_T = T
+        self.SubImg_Step = Step
 
     SubImg_method = 0
     SubImg_T = 500
+    SubImg_Step = 1
 
     def get_SubImg_(self):
         '''TODO:增加设置栏目，可以更改更新数量以及'''
@@ -655,13 +657,13 @@ class MainWindow(QMainWindow, WindowMixin):
         self.Raw_Dir = directory
         dirname = QFileDialog.getExistingDirectory(None, "选择要保存的clear文件夹", "./")
         self.dirname = dirname
-        from libs.get_ClearImg import get_ClearImg
+        from libs.get_ClearImg_ import get_ClearImg
         if self.Raw_Dir == None:
             pass
         else:
-            self.get_ClearImg = get_ClearImg(self.Raw_Dir, self.dirname, self.SubImg_T)
+            self.get_ClearImg = get_ClearImg(self.Raw_Dir, self.dirname, self.SubImg_T, self.SubImg_Step)
             from libs.prograssbar import proBar
-            self.proBar = proBar()
+            self.proBar = proBar("Get SubImg")
             self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
             self.proBar.quick_sig.connect(self.get_ClearImg.set_quick_flag)
             self.get_ClearImg.start()
@@ -691,7 +693,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.proBar.quick_sig.connect(self.paticle_track.set_quick_flag)
         self.paticle_track.start()
         self.proBar.start()
-        self.have_tracked = self.paticle_track.over_tracked()
+        self.have_tracked, self.all_bboxs = self.paticle_track.over_tracked()
 
     def update_tracked_(self):
         dir = self.defaultSaveDir
@@ -707,16 +709,17 @@ class MainWindow(QMainWindow, WindowMixin):
             fig = figure_DwellTime(input)
             fig.start()
     have_tracked = None
+    all_bboxs = None
     def save_result_(self):
         if self.have_tracked != None:
-            input = self.have_tracked
+            tracked_input = self.have_tracked
+            bboxs_input = self.all_bboxs
             FileName = QFileDialog.getSaveFileName(self, "选择保存路径", "/home/user/桌面", ".xlsx")
             save_path = FileName[0] + FileName[1]
-            print(save_path)
             from libs.save_result_ import save_result_
             if ".xlsx" in save_path:
                 parameter = [self.SubImg_method, self.SubImg_T]
-                save_result_ = save_result_(input, parameter, save_path)
+                save_result_ = save_result_(self.defaultSaveDir, tracked_input, parameter, save_path)
                 save_result_.save()
 
 
