@@ -22,7 +22,9 @@ class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.
     def endElement(self, name):
     # 遇到</tag>执行的方法，name不用自己传值（重写）
     # print "endElement"
-        if name == "xmin":
+        if name == "name":
+            self.temp.append(self.tag)
+        elif name == "xmin":
             self.temp.append(int(self.xmin))
         elif name == "ymin":
             self.temp.append(int(self.ymin))
@@ -51,7 +53,7 @@ class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.
             self.ymax = content
 
 def read_box(path):
-    '''读取xml文件，并返回box的列表[[xmin,ymin,xmax,ymax], [xmin,ymin,xmax,ymax]]'''
+    '''读取xml文件，并返回box的列表[[name,xmin,ymin,xmax,ymax], [name,xmin,ymin,xmax,ymax]]'''
     parser = sax.make_parser()  # 创建一个 XMLReader
     parser.setFeature(sax.handler.feature_namespaces, 0)  # turn off namepsaces
     Handler = Box_Handler()  # 重写 ContextHandler
@@ -83,7 +85,7 @@ class track(QThread):
         for i in range(len(self.bboxs)):
             for j in range(len(self.bboxs[i])):
                 bbox = self.bboxs[i][j]
-                if len(bbox) == 4:
+                if len(bbox) == 5:
                     self.search(i, j, bbox)
             if len(self.have_tracked) > 0:
                 for i in range(len(self.have_tracked)):
@@ -102,11 +104,11 @@ class track(QThread):
 
     def search(self, frame, box_id, bbox):
         '''TODO:现在用的是中心位置，后面可以换成图片最亮点的位置，这样精度会提高很多'''
-        central = [(bbox[2] + bbox[0]) // 2, (bbox[3] + bbox[1]) // 2, 0]
+        central = [(bbox[3] + bbox[1]) // 2, (bbox[4] + bbox[2]) // 2, 0]
         flag = -1  # 用来标志一个新的bbox是否被分入以前的类，如果没有则根据此flag重新创建一类
         if len(self.have_tracked) == 0:
             self.have_tracked.append([central, [frame, box_id]])
-            self.xml_modify(frame, box_id, "binding", 0)
+            self.xml_modify(frame, box_id, 0)
         else:
             for i in range(len(self.have_tracked)):
                # print(i, self.have_tracked)
@@ -119,12 +121,12 @@ class track(QThread):
                         self.have_tracked[i].append([frame, box_id])
                         # print(i, '--', self.have_tracked)
                         self.update_mass_central(i)
-                        self.xml_modify(frame, box_id, "binding", i)
+                        self.xml_modify(frame, box_id, i)
                         break
             if flag == -1:
                # print(frame, 'dist too long')
                 self.have_tracked.append([central, [frame, box_id]])
-                self.xml_modify(frame, box_id, "binding", len(self.have_tracked) - 1)
+                self.xml_modify(frame, box_id, len(self.have_tracked) - 1)
 
     def update_mass_central(self, ID):
         '''更新质心位置，每次放入新的粒子都需要更新'''
@@ -142,7 +144,7 @@ class track(QThread):
         self.have_tracked[ID][0] = [x_mean, y_mean, 0]
 
     def get_central_point(self, bbox):
-        return (bbox[2]+bbox[0]) // 2, (bbox[3]+bbox[1]) // 2
+        return (bbox[3]+bbox[1]) // 2, (bbox[4]+bbox[2]) // 2
     def distEclud(self, vecA, vecB):
         """欧式距离
         输入：向量A, 向量B
@@ -152,13 +154,14 @@ class track(QThread):
         b = (vecA[1] - vecB[1]) ** 2
         return math.sqrt(a + b)
 
-    def xml_modify(self, frame, box_id, type, ID):
+    def xml_modify(self, frame, box_id, ID):
         '''用于修改每个Particle的分类'''
         xml_path = self.xml[frame]
+        type = self.bboxs[frame][box_id][0]
         dom = xml.dom.minidom.parse(xml_path)
         root = dom.documentElement
         name = root.getElementsByTagName('name')
-        name[box_id].firstChild.data = type + str(ID)
+        name[box_id].firstChild.data = type + "__ID:" + str(ID)
         print('Frame %d , box_id %d have been modified %s %d' % (frame, box_id, type, ID))
         # print(self.bboxs[frame][box_id])
         with open(xml_path, 'w') as fh:
