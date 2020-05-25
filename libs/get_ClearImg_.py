@@ -30,6 +30,8 @@ class get_ClearImg(QThread):
             img2 = cv2.imread(path[i + 1])
             img = img2 - img1
 
+            img = cv2.bitwise_not(img)
+
             cv2.imwrite(self.save_dir+"/%d.tif" % (i + 1), img)
             flag += 1
             if self.quick_flag == 1:
