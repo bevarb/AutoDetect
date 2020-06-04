@@ -13,6 +13,6 @@ def change_name(root, save_root, begain, type):
         print(name[i], "have been changed for", new)
 
 
-root = "/home/user/wangxu_data/Data/To WangXu/aaa"
-save_root = "/home/user/wangxu_data/Data/To WangXu/bbb"
-change_name(root, save_root, 1200, ".xml")
+root = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/debinding_tifs"
+save_root = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/111"
+change_name(root, save_root, 1837, ".tif")

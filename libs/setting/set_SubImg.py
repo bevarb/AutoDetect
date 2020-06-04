@@ -67,17 +67,16 @@ class set_SubImg(QThread):
         ret = self.dialog.exec_()
 
         if ret == 0:
-            method = -1
             if self.cob1.currentIndex() == 0:
-                method = 0
+                self.method = 0
             else:
-                method = 1
+                self.method = 1
             if len(self.lineedit2.text()) != 0:
-                self.set_SubImg_sig.emit(method, int(self.lineedit2.text()), int(self.lineedit3.text()))
+                self.set_SubImg_sig[int, int, int].emit(self.method, int(self.lineedit2.text()), int(self.lineedit3.text()))
 
     def cob_change(self, text):
         if text == 1:
-            self.lineedit2.setText("None")
+            self.lineedit2.setText("1")
     # def set_value(self, i):
     #     self.progressBar.setValue(i)
     #     if i == 100:

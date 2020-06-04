@@ -32,8 +32,8 @@ def get_deletelist(img_path, flag):
             print("add one delete file %s%s" % (str(i), flag))
     print('There have %d files need been delete' % len(deletelist))
     return deletelist
-img_path = "/home/user/wangxu_data/code/2-AutoDetect/mmdetection/data/VOCdevkit/VOC2007/JPEGImages"
-xml_path = "/home/user/wangxu_data/code/2-AutoDetect/mmdetection/data/VOCdevkit/VOC2007/Annotations"
+img_path = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/binding_tifs"
+xml_path = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/binding_Annotations"
 deletlist = get_deletelist(xml_path, ".xml")
 delete_xml(deletlist, img_path, ".tif")
 list_dir(img_path)

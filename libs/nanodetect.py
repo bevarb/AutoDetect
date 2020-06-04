@@ -7,6 +7,7 @@ from PyQt5.QtCore import *
 # 首先下载模型文件https://s3.ap-northeast-2.amazonaws.com/open-mmlab/mmdetection/models/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth
 class detect(QThread):
     progressBarValue = pyqtSignal(int)
+
     def __init__(self, model_path, config_path, defaultSaveDir, dirname, parent=None):
         super(detect, self).__init__()
         config_file = config_path
@@ -55,7 +56,7 @@ class detect(QThread):
                 if self.quick_flag == 1:
                     break
                 prograssbar_value = round(flag / len(imgs), 2) * 100
-                self.progressBarValue.emit(prograssbar_value)
+                self.progressBarValue[int].emit(int(prograssbar_value))
 
 
 

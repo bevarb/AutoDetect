@@ -1,11 +1,10 @@
 from xml import sax
 import os
 import cv2
-import pandas as pd
-import numpy as np
+from shutil import copyfile
 class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.ContentHandler
     def __init__(self):
-        sax.ContentHandler.__init__(self)  # 弗父类和子类都需要初始化（做一些变量的赋值操作等）
+        sax.ContentHandler.__init__(self)  # 父类和子类都需要初始化（做一些变量的赋值操作等）
         self.CurrentData = ""
         self.tag = ""
         self.xmin = ""
@@ -59,15 +58,22 @@ def read_box(path):
     parser.setContentHandler(Handler)
     parser.parse(path)
     return Box
+all_xml = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/All_Annotations"
+source_xml = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/binding_Annotations"
+source_tifs = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/binding_tifs"
+target_xml = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/debinding_Annotations"
+target_tifs = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/debinding_tifs"
+di = os.listdir(source_tifs)
+di = sorted(di, key=lambda x: int(x.split(".")[0]))
+path = [source_tifs + "/" + d for d in di]
+j = 0
+for i in range(len(path)):
+    # box = read_box(path[i])
+    # if len(box) == 0:
+    #     copyfile(all_xml + ("/%d" % i) + ".xml", target_xml + ("/%d" % i) + ".xml")
+    img = cv2.imread(source_tifs + ("/%d" % i) + ".tif")
+    img = cv2.bitwise_not(img)
+    cv2.imwrite(target_tifs + ("/%d" % i) + ".tif", img)
+        # j += 1
 
-root = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/binding_Annotations"
-di = os.listdir(root)
-path = [root + "/" + d for d in di]
-i = 0
-for pa in path:
-    box = read_box(pa)
-    if len(box) == 0:
-        os.remove(pa)
-        i += 1
-        print(pa)
-print('There have %d xmls dont have bbox' % i)
+print('There have %d xmls dont have bbox' % j)

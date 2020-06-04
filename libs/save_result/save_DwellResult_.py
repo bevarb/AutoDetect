@@ -1,6 +1,6 @@
 from libs.read_bbox import read_bbox
 import pandas as pd
-class save_result_():
+class save_DwellResult_():
     def __init__(self, xml_dir, track_input, parameter, save_path):
         self.xml_dir = xml_dir
         self.track_input = track_input
@@ -19,19 +19,25 @@ class save_result_():
             method = "逐帧递减"
         # Data.append(["处理方法:", method])
         # Data.append(["更新周期", T])
-        Data.append(["ID", "First Frame", "Last Frame", "Dwell Time", "Trail Frame, [central_x, central_y]"])
+        Data.append(["ID", "First Frame", "Last Frame", "Dwell Time"])
         for i in range(len(all)):
             temp = []
+
+            start_frame = all[i][1][0]
+            over_frame = all[i][-1][0]
+            if len(all[i][0]) == 4:
+                for j in range(1, len(all[i])):
+                    if len(all[i][j]) == 3:
+                        over_frame = all[i][j][0]
+                        break
             temp.append(i)
-            temp.append(all[i][1][0])
-            temp.append(all[i][-1][0])
-            temp.append(all[i][-1][0] - all[i][1][0] + 1)
-            for j in range(len(all[i]) - 1):
-                frame = all[i][j + 1][0]
-                box_id = all[i][j + 1][1]
-                bbox = read_bbox.read(self.xml_dir + "/" + str(frame) + ".xml")
-                [central_x, central_y] = self.get_central_point(bbox[box_id])
-                temp.append([frame, [central_x, central_y]])
+            temp.append(start_frame)
+            temp.append(over_frame)
+            temp.append(over_frame - start_frame)
+
+            for j in range(len(all[i])):
+                temp.append(all[i][j])
+
             Data.append(temp)
 
         df = pd.DataFrame(Data)

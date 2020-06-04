@@ -48,6 +48,7 @@ from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
 from libs.nanodetect import detect
 from libs.nanotrack import track
+from libs.read_bbox import read_bbox
 __appname__ = 'labelImg'
 
 
@@ -364,17 +365,23 @@ class MainWindow(QMainWindow, WindowMixin):
         self.get_SubImg_Action = QAction(QIcon('resources/icons/open.png'), '&Get Sub Image', self)
         self.detect_Action = QAction(QIcon('resources/icons/open.png'), '&Detect', self)
         self.track_Action = QAction(QIcon('resources/icons/open.png'), '&Track', self)
-        self.update_tracked_Action = QAction(QIcon('resources/icons/open.png'), '&Update Tracked(修改中)', self)
+        self.update_tracked_Action = QAction(QIcon('resources/icons/open.png'), '&Update Tracked Data', self)
         self.figure_DwellTime_Action = QAction(QIcon('resources/icons/open.png'), '&Figure Dwell time', self)
-        self.save_result_Action = QAction(QIcon('resources/icons/open.png'), '&save result', self)
+        self.figure_DynamicTrack_Action = QAction(QIcon('resources/icons/open.png'), '&Figure Dynamic Tracking', self)
+        self.save_DwellResult_Action = QAction(QIcon('resources/icons/open.png'), '&save Dwell result', self)
+        self.save_DynamicResult_Action = QAction(QIcon('resources/icons/open.png'), '&save Dynamic result', self)
         self.get_SubImg_Action.triggered.connect(self.get_SubImg_)
         self.detect_Action.triggered.connect(self.detect_)
         self.track_Action.triggered.connect(self.track_)
         self.update_tracked_Action.triggered.connect(self.update_tracked_)
         self.figure_DwellTime_Action.triggered.connect(self.figure_DwellTime_)
-        self.save_result_Action.triggered.connect(self.save_result_)
+        self.figure_DynamicTrack_Action.triggered.connect(self.figure_DynamicTrack_)
+        self.save_DwellResult_Action.triggered.connect(self.save_DwellResult_)
+        self.save_DynamicResult_Action.triggered.connect(self.save_DynamicResult_)
 
         self.setting_Menu = QMenu("Settings")
+        self.figure_Menu = QMenu("Figure")
+        self.saveResult_Menu = QMenu("Save Result")
 
         self.detect_Menu = self.menuBar().addMenu('&Detect')
         self.detect_Menu.addMenu(self.setting_Menu)
@@ -382,8 +389,9 @@ class MainWindow(QMainWindow, WindowMixin):
         self.detect_Menu.addAction(self.detect_Action)
         self.detect_Menu.addAction(self.track_Action)
         self.detect_Menu.addAction(self.update_tracked_Action)
-        self.detect_Menu.addAction(self.figure_DwellTime_Action)
-        self.detect_Menu.addAction(self.save_result_Action)
+        self.detect_Menu.addMenu(self.figure_Menu)
+        self.detect_Menu.addMenu(self.saveResult_Menu)
+
         # Settings Actions:
         self.set_SubImg_Action = QAction(QIcon('resources/icons/open.png'), '&Set SubImg', self)
         self.set_SubImg_Action.triggered.connect(self.set_SubImg_)
@@ -393,6 +401,21 @@ class MainWindow(QMainWindow, WindowMixin):
         self.setting_Menu.addAction(self.set_SubImg_Action)
         self.setting_Menu.addAction(self.set_Detect_Action)
         self.setting_Menu.addAction(self.set_Figure_Action)
+
+        # Figure Menu add Action
+        self.figure_Menu.addAction(self.figure_DwellTime_Action)
+        self.figure_Menu.addAction(self.figure_DynamicTrack_Action)
+        # Save REsult Menu add Action
+        self.saveResult_Menu.addAction(self.save_DwellResult_Action)
+        self.saveResult_Menu.addAction(self.save_DynamicResult_Action)
+
+
+        # Improved Plan
+        self.Improved_Menu = self.menuBar().addMenu('&Improved')
+        self.Improved_Action = QAction(QIcon('resources/icons/open.png'), '&Improved Plan', self)
+        self.Improved_Action.setShortcut("ctrl+v")
+        self.Improved_Action.triggered.connect(self.Improved_Plan_)
+        self.Improved_Menu.addAction(self.Improved_Action)
 
         # Auto saving : Enable auto saving if pressing next
         self.autoSaving = QAction(getStr('autoSaveMode'), self)
@@ -636,6 +659,11 @@ class MainWindow(QMainWindow, WindowMixin):
             self.recentFiles.pop()
         self.recentFiles.insert(0, filePath)
 
+
+    OPEN_UPDATETRACK_TEXT = r"There don't have any track Date, if you have tracked Before," \
+                            r" Please click <ok> to update track Date!" \
+                            r" Else if you have't tracked before," \
+                            r"Please click <cancel>, and track first! "
     def set_SubImg_(self):
         from libs.setting.set_SubImg import set_SubImg
         self.set_SubImg = set_SubImg()
@@ -661,7 +689,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.Raw_Dir == None:
             pass
         else:
-            self.get_ClearImg = get_ClearImg(self.Raw_Dir, self.dirname, self.SubImg_T, self.SubImg_Step)
+            self.get_ClearImg = get_ClearImg(self.Raw_Dir, self.dirname, self.SubImg_method, self.SubImg_T, self.SubImg_Step)
             from libs.prograssbar import proBar
             self.proBar = proBar("Get SubImg")
             self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
@@ -684,44 +712,120 @@ class MainWindow(QMainWindow, WindowMixin):
         self.proBar.start()
         self.nano.start()
 
-
+    have_tracked = None
     def track_(self):
-        self.paticle_track = track(self.defaultSaveDir)
-        from libs.prograssbar import proBar
-        self.proBar = proBar("Track")
-        self.paticle_track.progressBarValue.connect(self.proBar.set_value)
-        self.proBar.quick_sig.connect(self.paticle_track.set_quick_flag)
-        self.paticle_track.start()
-        self.proBar.start()
-        self.have_tracked, self.all_bboxs = self.paticle_track.over_tracked()
+        dirname = QFileDialog.getExistingDirectory(None, "选择要保存的track xml文件夹", "./")
+        if dirname != "":
+            self.track_dir = dirname
+            self.paticle_track = track(self.defaultSaveDir, self.track_dir, self.SubImg_T)
+            from libs.prograssbar import proBar
+            self.proBar = proBar("Track")
+            self.paticle_track.progressBarValue.connect(self.proBar.set_value)
+            self.proBar.quick_sig.connect(self.paticle_track.set_quick_flag)
+            self.paticle_track.after_track.connect(self.after_track)
+            self.paticle_track.start()
+            self.proBar.start()
+
+    def after_track(self, i):
+        self.defaultSaveDir = self.track_dir
+        if i == 1:
+            self.have_tracked, self.all_bboxs = self.paticle_track.over_tracked()
+        elif i == 2:
+            self.have_tracked, self.all_bboxs = self.update_track.over_tracked()
+            from libs.attention_Dialog_ import Attention
+            Att = Attention("Update have over!", flag=1)
+            Att.Show_()
 
     def update_tracked_(self):
-        dir = self.defaultSaveDir
-        xml = os.listdir(dir)
-        xml = sorted(xml, key=lambda x: int(x.split('.')[0]))
 
+        directory = QFileDialog.getExistingDirectory(None, "选择跟踪后的XML文件夹", "./")
+
+        if directory != "":
+            self.track_dir = directory
+            from libs.update_track_data_ import update_track_data
+            self.update_track = update_track_data(self.track_dir)
+            self.update_track.after_track.connect(self.after_track)
+            self.update_track.start()
+
+
+    def receive_click_update_track(self, s1):
+        '''接受attention的信号，用来自动点击update'''
+        self.update_tracked_()
 
     def figure_DwellTime_(self):
-        '''TODO:暂未将追踪结果写入文件，方便读取'''
+
         if self.have_tracked != None:
             input = self.have_tracked
-            from libs.figure_DwellTime import figure_DwellTime
+            from libs.figure.figure_DwellTime import figure_DwellTime
             fig = figure_DwellTime(input)
-            fig.start()
-    have_tracked = None
+            fig.process_()
+        else:
+            from libs.attention_Dialog_ import Attention
+            Att = Attention(self.OPEN_UPDATETRACK_TEXT)
+            Att.open_updateTrack_Sig[str].connect(self.receive_click_update_track)
+            Att.Show_()
+
+    def figure_DynamicTrack_(self):
+
+        if self.have_tracked != None:
+            input = self.have_tracked
+            from libs.figure.figure_DynamicTrack import figure_DynamicTrack
+            fig = figure_DynamicTrack(input)
+            fig.process_()
+        else:
+            from libs.attention_Dialog_ import Attention
+            Att = Attention(self.OPEN_UPDATETRACK_TEXT)
+            Att.open_updateTrack_Sig[str].connect(self.receive_click_update_track)
+            Att.Show_()
+
     all_bboxs = None
-    def save_result_(self):
+    def save_DwellResult_(self):
         if self.have_tracked != None:
             tracked_input = self.have_tracked
             bboxs_input = self.all_bboxs
             FileName = QFileDialog.getSaveFileName(self, "选择保存路径", "/home/user/桌面", ".xlsx")
             save_path = FileName[0] + FileName[1]
-            from libs.save_result_ import save_result_
+            from libs.save_result.save_DwellResult_ import save_DwellResult_
             if ".xlsx" in save_path:
                 parameter = [self.SubImg_method, self.SubImg_T]
-                save_result_ = save_result_(self.defaultSaveDir, tracked_input, parameter, save_path)
+                save_result_ = save_DwellResult_(self.defaultSaveDir, tracked_input, parameter, save_path)
                 save_result_.save()
+        else:
+            from libs.attention_Dialog_ import Attention
+            Att = Attention(self.OPEN_UPDATETRACK_TEXT)
+            Att.open_updateTrack_Sig[str].connect(self.receive_click_update_track)
+            Att.Show_()
 
+
+    def save_DynamicResult_(self):
+        if self.have_tracked != None:
+            tracked_input = self.have_tracked
+            bboxs_input = self.all_bboxs
+            FileName = QFileDialog.getSaveFileName(self, "选择保存路径", "/home/user/桌面", ".xlsx")
+            save_path = FileName[0] + FileName[1]
+            from libs.save_result.save_DynamicResult_ import save_DynamicResult_
+            if ".xlsx" in save_path:
+                parameter = [self.SubImg_method, self.SubImg_T]
+                save_result_ = save_DynamicResult_(tracked_input, parameter, save_path)
+                save_result_.save()
+        else:
+            from libs.attention_Dialog_ import Attention
+            Att = Attention(self.OPEN_UPDATETRACK_TEXT)
+            Att.open_updateTrack_Sig[str].connect(self.receive_click_update_track)
+            Att.Show_()
+
+    change_filePath = None
+    def Improved_Plan_(self):
+        if self.filePath != None:
+            if self.filePath != self.change_filePath:
+                current_tif_path = self.filePath
+                name = current_tif_path.split("/")[-1].split(".")[0]
+                current_xml_path = self.defaultSaveDir + "/" + name + ".xml"
+                import shutil
+                new_name = len(os.listdir("Improved/tifs"))
+                shutil.copyfile(current_tif_path, "Improved/tifs/%d.tif" % new_name)
+                shutil.copyfile(current_xml_path, "Improved/xmls/%d.xml" % new_name)
+                self.change_filePath = current_tif_path
 
 
     def beginner(self):
@@ -956,6 +1060,32 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.labelFile.save(annotationFilePath, shapes, self.filePath, self.imageData,
                                     self.lineColor.getRgb(), self.fillColor.getRgb())
             print('Image:{0} -> Annotation:{1}'.format(self.filePath, annotationFilePath))
+            if self.have_tracked != None:
+                # 获取修改xml文件的名字，检查这次名字里是否有NONE
+                import xml.dom.minidom
+                dom = xml.dom.minidom.parse(annotationFilePath)
+                root = dom.documentElement
+                names = root.getElementsByTagName('name')
+                for i in range(len(names)):
+                    name = names[i].firstChild.data
+                    # 如果名字有NONE，那么从所有的标记类中寻找
+                    if name in ["None", "NONE", "none"]:
+                        frame = annotationFilePath.split('/')[-1].split(".")[0]
+                        box_id = i
+                        for tra in self.have_tracked:
+                            if [int(frame), box_id] in tra:
+                                    for i in range(1, len(tra)):
+                                        # 寻找到对应类，对从该frame开始，后面的frame全部标记为NONE
+                                        if tra[i][0] >= int(frame):
+                                            xml_path = self.track_dir + "/" + str(tra[i][0]) + ".xml"
+                                            dom = xml.dom.minidom.parse(xml_path)
+                                            root = dom.documentElement
+                                            names = root.getElementsByTagName('name')
+                                            names[tra[i][1]].firstChild.data = "NONE"
+                                            with open(xml_path, 'w') as fh:
+                                                dom.writexml(fh)
+                                            tra[i].append("NONE")
+                                    tra[0].append("Have None")
             return True
         except LabelFileError as e:
             self.errorMessage(u'Error saving label data', u'<b>%s</b>' % e)
