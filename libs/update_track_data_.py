@@ -41,7 +41,7 @@ class update_track_data(QThread):
                     else:
                         self.have_tracked[ID].append([Frame, j])
 
-        self.after_track.emit(2)
+        self.after_track[int].emit(2)
 
 
     def over_tracked(self):

@@ -1,5 +1,6 @@
 from libs.read_bbox import read_bbox
 import pandas as pd
+import numpy as np
 class save_DynamicResult_():
     def __init__(self, track_input, parameter, save_path):
         self.track_input = track_input
@@ -37,10 +38,20 @@ class save_DynamicResult_():
         debinding_Data = pd.DataFrame(debinding, columns=["Frame", "New Debinding"])
         debinding_Data = debinding_Data.set_index("Frame", drop=True)
 
+
         df = pd.concat([binding_Data, debinding_Data], axis=1)
-        print(df)
+
+        max_index = df.index[-1]
+        index = [i for i in range(1, max_index + 1)]
+        data = np.zeros([max_index, 2])
+        for i in df.index:
+            data[i - 1, :] = df.loc[i, :]
+        new = pd.DataFrame(data, index=index, columns=["New Binding", "New Debinding"])
+        new = new.fillna(0)
+
+       # print(df)
         writer = pd.ExcelWriter(self.save_path)  # 写入Excel文件
-        df.to_excel(writer, 'page_1', float_format='%d')
+        new.to_excel(writer, 'page_1', float_format='%d')
         worksheet1 = writer.sheets["page_1"]
         worksheet1.set_column('A:D', 13)
         writer.save()

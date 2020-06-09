@@ -717,7 +717,7 @@ class MainWindow(QMainWindow, WindowMixin):
         dirname = QFileDialog.getExistingDirectory(None, "选择要保存的track xml文件夹", "./")
         if dirname != "":
             self.track_dir = dirname
-            self.paticle_track = track(self.defaultSaveDir, self.track_dir, self.SubImg_T)
+            self.paticle_track = track(self.defaultSaveDir, self.track_dir, T=self.SubImg_T)
             from libs.prograssbar import proBar
             self.proBar = proBar("Track")
             self.paticle_track.progressBarValue.connect(self.proBar.set_value)
