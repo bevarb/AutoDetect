@@ -9,9 +9,10 @@ from libs.pascal_voc_io import PascalVocWriter
 class track(QThread):
     progressBarValue = pyqtSignal(int)
     after_track = pyqtSignal(int)
-    def __init__(self, xml_dir, track_xml_dir, T=500, parent=None):
+    def __init__(self, xml_dir, track_xml_dir, Method=0, T=500, parent=None):
         super(track, self).__init__()
         self.SubImg_T = T
+        self.Method = Method
 
         self.xml_dir = xml_dir
         self.dir = os.listdir(self.xml_dir)
@@ -41,16 +42,22 @@ class track(QThread):
                 if len(bbox) == 5:
                     self.search(i, j, bbox)
             if len(self.have_tracked) > 0:
-                for k in range(len(self.have_tracked)):
-                    frame = int(self.dir[i].split(".")[0])
+                if self.Method == 0:  # 减第一帧所用的track
+                    for k in range(len(self.have_tracked)):
+                        frame = int(self.dir[i].split(".")[0])
 
-                    if self.have_tracked[k][0][2] != 'OVER':
-                        if self.have_tracked[k][0][2] < 5:
-                            self.have_tracked[k][0][2] += 1
-                        # else:
-                        #     self.have_tracked[k][0][2] = 'OVER'
-                        elif (self.have_tracked[k][0][2] >= 5) and (frame % self.SubImg_T != 0):
+                        if self.have_tracked[k][0][2] != 'OVER':
+                            if self.have_tracked[k][0][2] < 5:
+                                self.have_tracked[k][0][2] += 1
+                            # else:
+                            #     self.have_tracked[k][0][2] = 'OVER'
+                            elif (self.have_tracked[k][0][2] >= 5) and (frame % self.SubImg_T != 0):
+                                self.have_tracked[k][0][2] = 'OVER'
+                elif self.Method == 1:  # 减前一帧所用的track
+                    for k in range(len(self.have_tracked)):
+                        if len(self.have_tracked[k]) == 3:  # 里面只有第一帧和最后一帧
                             self.have_tracked[k][0][2] = 'OVER'
+
             flag += 1
             if self.quick_flag == 1:
                 break
@@ -74,11 +81,12 @@ class track(QThread):
         central = [(bbox[3] + bbox[1]) // 2, (bbox[4] + bbox[2]) // 2, 0]
 
         flag = -1  # 用来标志一个新的bbox是否被分入以前的类，如果没有则根据此flag重新创建一类
-        if len(self.have_tracked) == 0:
+        if len(self.have_tracked) == 0:  # 当have_tracked里面没有内容时新建第一个
             self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id]])
             self.xml_modify(frame, box_id, 0)
         else:
-            for i in range(len(self.have_tracked)):
+            for i in range(len(self.have_tracked)):  # 当have_tracked里面有内容时进行寻找，寻找到则将flag设置为1，并添加到have_tracked
+                                                     # 更新中心位置，修改对应的Box名称
                # print(i, self.have_tracked)
                 if self.have_tracked[i][0][2] != 'OVER':
                     temp = self.have_tracked[i][0]
@@ -93,7 +101,7 @@ class track(QThread):
                         self.xml_modify(frame, box_id, i)
                         break
 
-            if flag == -1:
+            if flag == -1:  # flag == -1说明have_tracked里面没有能归为一类的类，这时自创一类
                # print(frame, 'dist too long')
                 self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id]])
                 self.xml_modify(frame, box_id, len(self.have_tracked) - 1)

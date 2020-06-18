@@ -668,16 +668,25 @@ class MainWindow(QMainWindow, WindowMixin):
         from libs.setting.set_SubImg import set_SubImg
         self.set_SubImg = set_SubImg()
         self.set_SubImg.set_SubImg_sig.connect(self.receive_SubImg_sig)
-        self.set_SubImg.start()
+        self.set_SubImg.show_()
 
-    def receive_SubImg_sig(self, method, T, Step):
+    def receive_SubImg_sig(self, method, T, Step, Flag, Num):
         self.SubImg_method = method
         self.SubImg_T = T
         self.SubImg_Step = Step
+        self.SubImg_Flag =Flag
+        self.SubImg_Num = Num
+
+    def receive_SetTrack_sig(self, method):
+        print(method)
+        self.SubImg_method = method
+        self.track_son()
 
     SubImg_method = 0
     SubImg_T = 500
     SubImg_Step = 1
+    SubImg_Flag = "_"
+    SubImg_Num = "-1"
 
     def get_SubImg_(self):
         '''TODO:增加设置栏目，可以更改更新数量以及'''
@@ -689,7 +698,13 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.Raw_Dir == None:
             pass
         else:
-            self.get_ClearImg = get_ClearImg(self.Raw_Dir, self.dirname, self.SubImg_method, self.SubImg_T, self.SubImg_Step)
+            self.get_ClearImg = get_ClearImg(self.Raw_Dir,
+                                             self.dirname,
+                                             self.SubImg_method,
+                                             self.SubImg_T,
+                                             self.SubImg_Step,
+                                             Flag=self.SubImg_Flag,
+                                             Num=self.SubImg_Num)
             from libs.prograssbar import proBar
             self.proBar = proBar("Get SubImg")
             self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
@@ -714,10 +729,18 @@ class MainWindow(QMainWindow, WindowMixin):
 
     have_tracked = None
     def track_(self):
+        '''先设置跟踪方法，当接收到 ok 的信息后才开始跟踪'''
+        from libs.setting.set_Track import set_Track
+        set_Track = set_Track()
+        set_Track.show_()
+        set_Track.set_SubImg_sig[int].connect(self.receive_SetTrack_sig)
+
+    def track_son(self):
+        '''由于采用多线程，这里必须等待设置完成后才能开始跟踪，故需要建立子函数'''
         dirname = QFileDialog.getExistingDirectory(None, "选择要保存的track xml文件夹", "./")
         if dirname != "":
             self.track_dir = dirname
-            self.paticle_track = track(self.defaultSaveDir, self.track_dir, T=self.SubImg_T)
+            self.paticle_track = track(self.defaultSaveDir, self.track_dir, Method=self.SubImg_method, T=self.SubImg_T)
             from libs.prograssbar import proBar
             self.proBar = proBar("Track")
             self.paticle_track.progressBarValue.connect(self.proBar.set_value)
@@ -757,7 +780,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.have_tracked != None:
             input = self.have_tracked
             from libs.figure.figure_DwellTime import figure_DwellTime
-            fig = figure_DwellTime(input)
+            fig = figure_DwellTime(input, self.SubImg_method)
             fig.process_()
         else:
             from libs.attention_Dialog_ import Attention
@@ -770,7 +793,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.have_tracked != None:
             input = self.have_tracked
             from libs.figure.figure_DynamicTrack import figure_DynamicTrack
-            fig = figure_DynamicTrack(input)
+            fig = figure_DynamicTrack(input, self.SubImg_method)
             fig.process_()
         else:
             from libs.attention_Dialog_ import Attention

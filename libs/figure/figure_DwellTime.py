@@ -7,9 +7,10 @@ from libs.figure.figure_QDialog import fig_Dialog
 
 class figure_DwellTime(QThread):
 
-    def __init__(self, over_tracked, parent=None):
+    def __init__(self, over_tracked, Method, parent=None):
         super(figure_DwellTime, self).__init__()
         self.overtracked = over_tracked
+        self.Method = Method
 
     def process_(self):
         all = self.overtracked
@@ -22,6 +23,11 @@ class figure_DwellTime(QThread):
                     if len(all[i][j]) == 3:
                         over_frame = all[i][j][0]
                         break
+            if self.Method == 1 and len(all[i]) == 2:
+                continue  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+            elif len(all[i][0]) == 3 and self.Method == 0 and all[i][-1][0] % 500 == 0:
+                continue  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
+
             dwell_time.append(over_frame - start_frame)
 
         result = pd.value_counts(dwell_time)
@@ -33,6 +39,7 @@ class figure_DwellTime(QThread):
         plt.title("Histogram of binding dwell time", fontsize=10)
         plt.xlabel('Dwell Time, Frame')
         plt.savefig("./temp/temp_DwellTime.tif")
+        plt.close()
         fig = fig_Dialog("./temp/temp_DwellTime.tif", "Histogram of binding-event")
         fig.start()
 

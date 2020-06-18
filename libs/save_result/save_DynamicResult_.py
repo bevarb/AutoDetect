@@ -29,8 +29,13 @@ class save_DynamicResult_():
                     if len(all[i][j]) == 3:
                         over_frame = all[i][j][0]
                         break
+            if self.parameter[0] == 1 and len(all[i]) == 2:
+                over_frame = None  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+            elif len(all[i][0]) == 3 and self.parameter[0] == 0 and all[i][-1][0] % 500 == 0:
+                over_frame = None  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
             self.binding.append(start_frame)
-            self.debinding.append(over_frame)
+            if over_frame != None:
+                self.debinding.append(over_frame)
         binding = self.sort_(self.binding)
         debinding = self.sort_(self.debinding)
         binding_Data = pd.DataFrame(binding, columns=["Frame", "New Binding"])

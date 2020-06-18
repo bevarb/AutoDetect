@@ -11,14 +11,16 @@ class save_DwellResult_():
     def save(self):
         all = self.track_input
         Data = []
-        method = ""
+        method_name = ""
         T = self.parameter[1]
         if self.parameter[0] == 0:
-            method = "减第一帧"
+            method_name = "减第一帧"
         else:
-            method = "逐帧递减"
-        # Data.append(["处理方法:", method])
-        # Data.append(["更新周期", T])
+            method_name = "逐帧递减"
+            T = 1
+        Data.append(["处理方法:", method_name])
+
+        Data.append(["更新周期", T])
         Data.append(["ID", "First Frame", "Last Frame", "Dwell Time"])
         for i in range(len(all)):
             temp = []
@@ -30,6 +32,10 @@ class save_DwellResult_():
                     if len(all[i][j]) == 3:
                         over_frame = all[i][j][0]
                         break
+            if self.parameter[0] == 1 and len(all[i]) == 2:
+                continue  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+            elif len(all[i][0]) == 3 and self.parameter[0] == 0 and all[i][-1][0] % 500 == 0:
+                continue  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
             temp.append(i)
             temp.append(start_frame)
             temp.append(over_frame)

@@ -1,16 +1,15 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-class set_SubImg(QThread):
-    set_SubImg_sig = pyqtSignal(int, int, int)
+class set_SubImg(QDialog):
+    set_SubImg_sig = pyqtSignal(int, int, int, str, str)
     def __init__(self, method=0, T=500, Step=1, parent=None):
         super(set_SubImg, self).__init__()
         self.method = method
         self.T = T
         self.Step = Step
-    def __del__(self):
-        self.wait()
 
-    def run(self):
+
+    def show_(self):
         self.dialog = QDialog()
         self.dialog.setWindowTitle("设置处理格式")
         self.dialog.resize(350, 400)
@@ -27,7 +26,6 @@ class set_SubImg(QThread):
         layout1.addWidget(self.cob1)
         Wid1 = QWidget()
         Wid1.setLayout(layout1)
-
 
         layout2 = QHBoxLayout()
         lable2 = QLabel("刷新周期：")
@@ -50,14 +48,14 @@ class set_SubImg(QThread):
         Wid3.setLayout(layout3)
 
         layout4 = QHBoxLayout()
-        lable4 = QLabel("None")
-        layout4.addWidget(lable4)
+        self.lable4 = QLabel("None")
+        layout4.addWidget(self.lable4)
         Wid4 = QWidget()
         Wid4.setLayout(layout4)
 
         layout5 = QHBoxLayout()
         lable5 = QLabel("标志符：")
-        self.lineedit4 = QLineEdit("\"_\"")
+        self.lineedit4 = QLineEdit("_")
         lable6 = QLabel("顺序(0/1/2)：")
         self.lineedit5 = QLineEdit("1")
         update_btn = QPushButton("Update")
@@ -94,23 +92,41 @@ class set_SubImg(QThread):
         self.dialog.show()
         ok_btn.clicked.connect(self.dialog.close)
         choose_btn.clicked.connect(self.get_filename)
+        update_btn.clicked.connect(self.get_list)
 
         def _cancle():
             self.lineedit2.clear()
             self.dialog.close()
+
         cancle_btn.clicked.connect(_cancle)
         ret = self.dialog.exec_()
 
         if ret == 0:
+            method = -1
             if self.cob1.currentIndex() == 0:
-                self.method = 0
+                method = 0
             else:
-                self.method = 1
+                method = 1
             if len(self.lineedit2.text()) != 0:
-                self.set_SubImg_sig[int, int, int].emit(self.method, int(self.lineedit2.text()), int(self.lineedit3.text()))
+                self.set_SubImg_sig.emit(method,
+                                         int(self.lineedit2.text()),
+                                         int(self.lineedit3.text()),
+                                         self.lineedit4.text(),
+                                         self.lineedit5.text())
 
     def cob_change(self, text):
         if text == 1:
             self.lineedit2.setText("1")
+
     def get_filename(self):
-        print(1)
+        filename, filetype = QFileDialog.getOpenFileName(None, "选取实例图片", "./", "All Files (*)")
+        name = filename.split("/")[-1]
+        self.lable4.setText(name)
+
+    def get_list(self):
+        self.clearname = self.lable4.text()
+        flag = self.lineedit4.text()
+        num = self.lineedit5.text()
+        for i in range(len(flag)):
+            self.clearname = self.clearname.split(flag[i])[int(num[i])]
+        self.lable7.setText(self.clearname)

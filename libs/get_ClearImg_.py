@@ -6,13 +6,15 @@ from PyQt5.QtCore import *
 class get_ClearImg(QThread):
 
     progressBarValue = pyqtSignal(int)
-    def __init__(self, source_dir, save_dir, method, T, Step, parent=None):
+    def __init__(self, source_dir, save_dir, method, T, Step, Flag="_", Num="-1", parent=None):
         super(get_ClearImg, self).__init__()
         self.source_dir = source_dir
         self.save_dir = save_dir
         self.method = method
         self.T = T
         self.Step = Step
+        self.Flag = Flag
+        self.Num = Num
         self.quick_flag = 0
     def __del__(self):
         self.wait()
@@ -21,7 +23,10 @@ class get_ClearImg(QThread):
         root = self.source_dir
         name = os.listdir(root)
         # name = sorted(name, key=lambda x: int(x.split("_")[1]))
-        name = sorted(name, key=lambda x: int(x.split("_")[-1].split(".")[0]))
+        if len(self.Flag) == 1:
+            name = sorted(name, key=lambda x: int(x.split(self.Flag)[int(self.Num)]))
+        elif len(self.Flag) == 2:
+            name = sorted(name, key=lambda x: int(x.split(self.Flag[0])[int(self.Num[0])].split(self.Flag[1])[int(self.Num[1])]))
         path = [root + "/" + na for na in name]
         flag = 0
         for i in range(0, len(path) - 1, self.Step):

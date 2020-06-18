@@ -5,11 +5,12 @@ from libs.figure.figure_QDialog import fig_Dialog
 import os
 class figure_DynamicTrack(QThread):
 
-    def __init__(self, over_tracked, parent=None):
+    def __init__(self, over_tracked, method, parent=None):
         super(figure_DynamicTrack, self).__init__()
         self.overtracked = over_tracked
         self.binding = []
         self.debinding = []
+        self.Method = method
 
     def process_(self):
         all = self.overtracked
@@ -22,8 +23,13 @@ class figure_DynamicTrack(QThread):
                     if len(all[i][j]) == 3:
                         over_frame = all[i][j][0]
                         break
+            if self.Method == 1 and len(all[i]) == 2:
+                over_frame = None  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+            elif len(all[i][0]) == 3 and self.Method == 0 and all[i][-1][0] % 500 == 0:
+                over_frame = None  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
             self.binding.append(start_frame)
-            self.debinding.append(over_frame)
+            if over_frame != None:
+                self.debinding.append(over_frame)
         x_binding, y_binding = self.get_x_y(self.binding)
         x_debinding, y_debinding = self.get_x_y(self.debinding)
 
@@ -37,6 +43,7 @@ class figure_DynamicTrack(QThread):
         plt.legend()
         os.makedirs("temp", exist_ok=True)
         plt.savefig("./temp/temp_Dynamic_Track.tif")
+        plt.close()
         fig = fig_Dialog("./temp/temp_Dynamic_Track.tif", "Dynamic Track")
         fig.start()
 
