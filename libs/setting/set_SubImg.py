@@ -1,7 +1,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 class set_SubImg(QDialog):
-    set_SubImg_sig = pyqtSignal(int, int, int, str, str)
+    set_SubImg_sig = pyqtSignal(int, int, int, int, str, str, int, int, int)
     def __init__(self, method=0, T=500, Step=1, parent=None):
         super(set_SubImg, self).__init__()
         self.method = method
@@ -16,26 +16,40 @@ class set_SubImg(QDialog):
         layout = QVBoxLayout()
 
         layout1 = QHBoxLayout()
-        lable1 = QLabel("处理格式:")
+        lable1_1 = QLabel("处理格式:")
         self.cob1 = QComboBox()
         self.cob1.addItem("减第一帧")
         self.cob1.addItem("逐帧相减")
         self.cob1.setCurrentIndex(self.method)
         self.cob1.currentIndexChanged.connect(self.cob_change)
-        layout1.addWidget(lable1)
+        self.checkbox1 = QCheckBox("Mean")
+        self.checkbox1.setChecked(False)
+        self.checkbox2 = QCheckBox("32Bit")
+        self.checkbox2.setChecked(True)
+        self.checkbox3 = QCheckBox("Reverse")
+        self.checkbox3.setChecked(False)
+
+        layout1.addWidget(lable1_1)
         layout1.addWidget(self.cob1)
+        layout1.addWidget(self.checkbox1)
+        layout1.addWidget(self.checkbox2)
+        layout1.addWidget(self.checkbox3)
         Wid1 = QWidget()
         Wid1.setLayout(layout1)
 
         layout2 = QHBoxLayout()
-        lable2 = QLabel("刷新周期：")
-        self.lineedit2 = QLineEdit(str(self.T))
-        lable3 = QLabel("步长：")
-        self.lineedit3 = QLineEdit(str(self.Step))
-        layout2.addWidget(lable2)
-        layout2.addWidget(self.lineedit2)
-        layout2.addWidget(lable3)
-        layout2.addWidget(self.lineedit3)
+        lable21 = QLabel("Sub T：")
+        self.lineedit21 = QLineEdit(str(self.T))
+        lable22 = QLabel("Step：")
+        self.lineedit22 = QLineEdit(str(self.Step))
+        lable23 = QLabel("Mean Step：")
+        self.lineedit23 = QLineEdit(str(self.Step))
+        layout2.addWidget(lable21)
+        layout2.addWidget(self.lineedit21)
+        layout2.addWidget(lable22)
+        layout2.addWidget(self.lineedit22)
+        layout2.addWidget(lable23)
+        layout2.addWidget(self.lineedit23)
         Wid2 = QWidget()
         Wid2.setLayout(layout2)
 
@@ -107,16 +121,27 @@ class set_SubImg(QDialog):
                 method = 0
             else:
                 method = 1
-            if len(self.lineedit2.text()) != 0:
+            if len(self.lineedit22.text()) != 0:
+                is_mean = 1 if self.checkbox1.isChecked() else 0
+                is_32Bit = 1 if self.checkbox2.isChecked() else 0
+                is_reverse = 1 if self.checkbox3.isChecked() else 0
                 self.set_SubImg_sig.emit(method,
-                                         int(self.lineedit2.text()),
-                                         int(self.lineedit3.text()),
+                                         int(self.lineedit21.text()),
+                                         int(self.lineedit22.text()),
+                                         int(self.lineedit23.text()),
                                          self.lineedit4.text(),
-                                         self.lineedit5.text())
+                                         self.lineedit5.text(),
+                                         is_mean,
+                                         is_32Bit,
+                                         is_reverse)
 
     def cob_change(self, text):
         if text == 1:
-            self.lineedit2.setText("1")
+            self.lineedit21.setText("1")
+            self.lineedit22.setText("3")
+            self.lineedit23.setText("3")
+            self.checkbox1.setChecked(True)
+
 
     def get_filename(self):
         filename, filetype = QFileDialog.getOpenFileName(None, "选取实例图片", "./", "All Files (*)")

@@ -7,10 +7,15 @@ class save_DwellResult_():
         # self.bboxs = bboxs_input
         self.parameter = parameter
         self.save_path = save_path
+        self.max_Frame = 0
+        for i in range(len(track_input)):
+            if track_input[i][-1][0] > self.max_Frame:
+                self.max_Frame = track_input[i][-1][0]
 
     def save(self):
         all = self.track_input
         Data = []
+        #  将参数放入表格中，记录下来
         method_name = ""
         T = self.parameter[1]
         if self.parameter[0] == 0:
@@ -19,23 +24,32 @@ class save_DwellResult_():
             method_name = "逐帧递减"
             T = 1
         Data.append(["处理方法:", method_name])
-
         Data.append(["更新周期", T])
         Data.append(["ID", "First Frame", "Last Frame", "Dwell Time"])
+        # 开始将数据记录
         for i in range(len(all)):
             temp = []
 
             start_frame = all[i][1][0]
             over_frame = all[i][-1][0]
-            if len(all[i][0]) == 4:
-                for j in range(1, len(all[i])):
-                    if len(all[i][j]) == 3:
-                        over_frame = all[i][j][0]
-                        break
+            if all[i][-1][2] == "debinding":
+                over_index = self.search_debinding(all[i])
+                over_frame = all[i][over_index][0]
+            # elif all[i][-1][2] == "binding":
+            #     over_frame = self.max_Frame
+
+                # for j in range(1, len(all[i])):
+                #     if len(all[i][j]) == 3:
+                #         over_frame = all[i][j][0]
+                #         break
+
             if self.parameter[0] == 1 and len(all[i]) == 2:
-                continue  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
-            elif len(all[i][0]) == 3 and self.parameter[0] == 0 and all[i][-1][0] % 500 == 0:
-                continue  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
+                pass
+                # over_frame = self.max_Frame  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+            elif self.parameter[0] == 0 and all[i][-1][2] == "binding" and all[i][-1][0] % T == 0:
+                pass
+                # over_frame = self.max_Frame  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
+
             temp.append(i)
             temp.append(start_frame)
             temp.append(over_frame)
@@ -55,7 +69,18 @@ class save_DwellResult_():
         writer.save()
         writer.close()
 
-
+    def search_debinding(self, data):
+        '''从后往前搜索，找到第一次出现debinding的位置，则认为从这里结束,返回位置'''
+        index = -1
+        if data[1][2] == "debinding":
+            return 1
+        for i in range(2, len(data)):
+            index = -1 * i
+            if data[index][2] == "binding" and data[index + 1][2] == "debinding":
+                return index
+        if abs(index) >= len(data):
+            return -1
+        return -1
 
 
     def get_central_point(self, bbox):

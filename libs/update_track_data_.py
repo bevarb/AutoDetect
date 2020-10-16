@@ -31,13 +31,16 @@ class update_track_data(QThread):
                     name = self.bboxs[i][j][0]
                     ID = int(name.split("ID:")[-1])
                     Frame = int(self.dir[i].split(".")[0])
+                    # 如果ID较大，但是have_tracked内的数组没有这么多，则新建多个
                     if len(self.have_tracked) < ID + 1:
                         new_list_num = ID - len(self.have_tracked) + 1
                         for k in range(new_list_num):
                             self.have_tracked.append([[0, 0, 0]])
-                    if "NONE" in name:
-                        self.have_tracked[ID][0].append("Have Over")
-                        self.have_tracked[ID].append([Frame, j, "NONE"])
+                    if ("NONE" in name) and (len(self.have_tracked[ID][0]) == 3):
+                        self.have_tracked[ID][0].append("Have None")
+                        self.have_tracked[ID].append([Frame, j, "NONE__ID:%d" % ID])
+                    elif ("NONE" in name) and (len(self.have_tracked[ID][0]) == 3):
+                        self.have_tracked[ID].append([Frame, j, "NONE__ID:%d" % ID])
                     else:
                         self.have_tracked[ID].append([Frame, j])
 

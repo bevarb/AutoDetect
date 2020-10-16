@@ -23,7 +23,9 @@ class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.
     def endElement(self, name):
     # 遇到</tag>执行的方法，name不用自己传值（重写）
     # print "endElement"
-        if name == "xmin":
+        if name == "name":
+            self.temp.append(self.tag)
+        elif name == "xmin":
             self.temp.append(int(self.xmin))
         elif name == "ymin":
             self.temp.append(int(self.ymin))
@@ -60,12 +62,16 @@ def read_box(path):
     parser.parse(path)
     return Box
 
-root = "/home/user/wangxu_data/code/2-AutoDetect/VOC2007/binding_Annotations"
+root = "/home/user/桌面/ZCH/temp/xml"
 di = os.listdir(root)
 path = [root + "/" + d for d in di]
 i = 0
 for pa in path:
     box = read_box(pa)
+    # for b in box:
+        # if b[0] != "nano":
+        #     print(pa)
+        #     break
     if len(box) == 0:
         os.remove(pa)
         i += 1

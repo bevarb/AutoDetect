@@ -7,10 +7,11 @@ from libs.figure.figure_QDialog import fig_Dialog
 
 class figure_DwellTime(QThread):
 
-    def __init__(self, over_tracked, Method, parent=None):
+    def __init__(self, over_tracked, Method, T, parent=None):
         super(figure_DwellTime, self).__init__()
         self.overtracked = over_tracked
         self.Method = Method
+        self.SubImg_T = T
 
     def process_(self):
         all = self.overtracked
@@ -18,15 +19,18 @@ class figure_DwellTime(QThread):
         for i in range(len(all)):
             start_frame = all[i][1][0]
             over_frame = all[i][-1][0]
-            if len(all[i][0]) == 4:
-                for j in range(1, len(all[i])):
-                    if len(all[i][j]) == 3:
-                        over_frame = all[i][j][0]
-                        break
+            if all[i][-1][2] == "debinding":
+                over_index = self.search_debinding(all[i])
+                over_frame = all[i][over_index][0]
+            # if len(all[i][0]) == 4:
+            #     for j in range(1, len(all[i])):
+            #         if len(all[i][j]) == 3:
+            #             over_frame = all[i][j][0]
+            #             break
             if self.Method == 1 and len(all[i]) == 2:
                 continue  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
-            elif len(all[i][0]) == 3 and self.Method == 0 and all[i][-1][0] % 500 == 0:
-                continue  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
+            elif self.Method == 0 and all[i][-1][2] == "binding" and all[i][-1][0] % self.SubImg_T == 0:
+                continue  # 如果减第一帧，该轨迹的最后一帧是T的整数倍，那就认为该粒子还存在
 
             dwell_time.append(over_frame - start_frame)
 
@@ -35,7 +39,7 @@ class figure_DwellTime(QThread):
         x = sorted(x)
         y = [result[i] for i in x]
         plt.bar(range(len(y)), y, width=0.8, color='c', tick_label=x)
-        plt.xticks(fontsize=7, rotation=30)
+        plt.xticks(fontsize=5, rotation=30)
         plt.title("Histogram of binding dwell time", fontsize=10)
         plt.xlabel('Dwell Time, Frame')
         plt.savefig("./temp/temp_DwellTime.tif")
@@ -91,6 +95,18 @@ class figure_DwellTime(QThread):
             if len(lineedit1.text()) > 0:
                 print(lineedit1.text())
 
+    def search_debinding(self, data):
+        '''从后往前搜索，找到第一次出现debinding的位置，则认为从这里结束,返回位置'''
+        index = -1
+        if data[1][2] == "debinding":
+            return 1
+        for i in range(2, len(data)):
+            index = -1 * i
+            if data[index][2] == "binding" and data[index + 1][2] == "debinding":
+                return index
+        if abs(index) >= len(data):
+            return -1
+        return -1
 
 
     # def wheel_resize(self, ratio):

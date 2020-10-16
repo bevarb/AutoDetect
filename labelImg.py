@@ -141,7 +141,7 @@ class MainWindow(QMainWindow, WindowMixin):
         listLayout.addWidget(self.diffcButton)
         listLayout.addWidget(useDefaultLabelContainer)
 
-        # Create and add combobox for showing unique labels in group 
+        # Create and add combobox for showing unique labels in group
         self.comboBox = ComboBox(self)
         listLayout.addWidget(self.comboBox)
 
@@ -395,7 +395,8 @@ class MainWindow(QMainWindow, WindowMixin):
         # Settings Actions:
         self.set_SubImg_Action = QAction(QIcon('resources/icons/open.png'), '&Set SubImg', self)
         self.set_SubImg_Action.triggered.connect(self.set_SubImg_)
-        self.set_Detect_Action = QAction(QIcon('resources/icons/open.png'), '&Set Detect(开发中)', self)
+        self.set_Detect_Action = QAction(QIcon('resources/icons/open.png'), '&Set Detect', self)
+        self.set_Detect_Action.triggered.connect(self.set_Detect_)
         self.set_Figure_Action = QAction(QIcon('resources/icons/open.png'), '&Set Figure(开发中)', self)
 
         self.setting_Menu.addAction(self.set_SubImg_Action)
@@ -499,6 +500,13 @@ class MainWindow(QMainWindow, WindowMixin):
                 break
         self.resize(size)
         self.move(position)
+
+        # 将窗体移动到中心
+        qr = self.frameGeometry()  # 得到主窗体的框架信息
+        cp = QDesktopWidget().availableGeometry().center()  # 得到桌面的中心
+        qr.moveCenter(cp)  # 框架的中心与桌面中心对齐
+        self.move(qr.topLeft())  # 自身窗体的左上角与框架的左上角对齐
+
         saveDir = ustr(settings.get(SETTING_SAVE_DIR, None))
         self.lastOpenDir = ustr(settings.get(SETTING_LAST_OPEN_DIR, None))
         if self.defaultSaveDir is None and saveDir is not None and os.path.exists(saveDir):
@@ -665,28 +673,34 @@ class MainWindow(QMainWindow, WindowMixin):
                             r" Else if you have't tracked before," \
                             r"Please click <cancel>, and track first! "
     def set_SubImg_(self):
+        # 设置减图片的窗口
         from libs.setting.set_SubImg import set_SubImg
         self.set_SubImg = set_SubImg()
         self.set_SubImg.set_SubImg_sig.connect(self.receive_SubImg_sig)
         self.set_SubImg.show_()
 
-    def receive_SubImg_sig(self, method, T, Step, Flag, Num):
+    def receive_SubImg_sig(self, method, T, Step, mean_Step, Flag, Num, is_mean, is_32Bit, is_reverse):
+        # 接收信号，来自subImg的窗口
         self.SubImg_method = method
         self.SubImg_T = T
         self.SubImg_Step = Step
+        self.SubImg_mean_Step = mean_Step
         self.SubImg_Flag =Flag
         self.SubImg_Num = Num
+        self.SubImg_mean = is_mean
+        self.SubImg_if_32 = is_32Bit
+        self.SubImg_if_reverse = is_reverse
 
-    def receive_SetTrack_sig(self, method):
-        print(method)
-        self.SubImg_method = method
-        self.track_son()
+
 
     SubImg_method = 0
     SubImg_T = 500
     SubImg_Step = 1
+    SubImg_mean_Step = 1
     SubImg_Flag = "_"
     SubImg_Num = "-1"
+    SubImg_if_32 = 0
+    SubImg_if_reverse = 0
 
     def get_SubImg_(self):
         '''TODO:增加设置栏目，可以更改更新数量以及'''
@@ -694,58 +708,104 @@ class MainWindow(QMainWindow, WindowMixin):
         self.Raw_Dir = directory
         dirname = QFileDialog.getExistingDirectory(None, "选择要保存的clear文件夹", "./")
         self.dirname = dirname
-        from libs.get_ClearImg_ import get_ClearImg
-        if self.Raw_Dir == None:
-            pass
-        else:
-            self.get_ClearImg = get_ClearImg(self.Raw_Dir,
-                                             self.dirname,
-                                             self.SubImg_method,
-                                             self.SubImg_T,
-                                             self.SubImg_Step,
-                                             Flag=self.SubImg_Flag,
-                                             Num=self.SubImg_Num)
-            from libs.prograssbar import proBar
-            self.proBar = proBar("Get SubImg")
-            self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
-            self.proBar.quick_sig.connect(self.get_ClearImg.set_quick_flag)
-            self.get_ClearImg.start()
-            self.proBar.start()
+        if dirname != "":
+            from libs.get_ClearImg_ import get_ClearImg
+            if self.Raw_Dir == None:
+                pass
+            else:
+                self.get_ClearImg = get_ClearImg(self.Raw_Dir,
+                                                 self.dirname,
+                                                 self.SubImg_method,
+                                                 self.SubImg_T,
+                                                 self.SubImg_Step,
+                                                 self.SubImg_mean_Step,
+                                                 is_mean=self.SubImg_mean,
+                                                 Flag=self.SubImg_Flag,
+                                                 Num=self.SubImg_Num,
+                                                 is_32Bit=self.SubImg_if_32,
+                                                 is_reverse=self.SubImg_if_reverse)
+                from libs.prograssbar import proBar
+                self.proBar = proBar("Get SubImg")
+                self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
+                self.proBar.quick_sig.connect(self.get_ClearImg.set_quick_flag)
+                self.get_ClearImg.start()
+                self.proBar.start()
 
+    ModelPaths = [["/home/user/wangxu_data/code/2-AutoDetect/AutoDetect/work_dirs/New/Label-3.pth",],
+                  ["work_dirs/90%Detect/latest.pth",]]
+    model_method = 0
+    score = 0.5
+    def set_Detect_(self):
+        from libs.setting.set_Detect import set_Detect
+        self.set_Detect = set_Detect()
+        self.set_Detect.set_Detect_sig.connect(self.receive_Detect_sig)
+        self.set_Detect.show_()
+    def receive_Detect_sig(self, method, score):
+        self.model_method = method
+        self.score = score
 
     def detect_(self):
         '''TODO:增加设置栏目，可以更改配置文件和模型文件'''
         # filt = 'modelFile(*.pth)'
         # model_name, filtUsed = QFileDialog.getOpenFileName(None, "选择文件", "C:/", filt)
         self.config_path = "libs/detect/configs/faster_rcnn_r50_fpn_1x.py"
-        self.model_path = "work_dirs/90%Detect/latest.pth"
+        # self.model_path = "work_dirs/90%Detect/latest.pth"
         from libs.prograssbar import proBar
         self.proBar = proBar("Detect")
-        self.nano = detect(self.model_path, self.config_path, self.defaultSaveDir, self.dirname)
+        from libs.new_nanodetect import yolo_detect
+        model_path = self.ModelPaths[self.model_method][0]
+        if self.model_method == 0:
+            self.nano = yolo_detect(model_path, self.config_path, self.defaultSaveDir, self.dirname, self.score)
+        elif self.model_method == 1:
+            self.nano = detect(model_path, self.config_path, self.defaultSaveDir, self.dirname, self.score)
         self.nano.progressBarValue.connect(self.proBar.set_value)
         self.proBar.quick_sig.connect(self.nano.set_quick_flag)
         self.proBar.start()
         self.nano.start()
 
     have_tracked = None
-    def track_(self):
+    def receive_SetTrack_sig(self, method, L_limit, Frame_limit, T):
+        print(method)
+        self.SubImg_method = method
+        self.L_limit = L_limit
+        self.Frame_limit = Frame_limit
+        self.SubImg_T = T
+        if self.Track_Method == "track":
+            self.track_son()
+        else:
+            self.update_track_son()
+
+    SET_Track_STATUS = False  # 是否设置跟踪的状态记录，如果为False，则启动设置
+    Track_Method = "track"
+
+    def set_track_(self):
         '''先设置跟踪方法，当接收到 ok 的信息后才开始跟踪'''
         from libs.setting.set_Track import set_Track
         set_Track = set_Track()
         set_Track.show_()
-        set_Track.set_SubImg_sig[int].connect(self.receive_SetTrack_sig)
+        set_Track.set_SubImg_sig.connect(self.receive_SetTrack_sig)
+
+
+    def track_(self):
+        '''由于采用多线程，这里必须等待设置完成后才能开始跟踪，故需要建立子函数'''
+        if not self.SET_Track_STATUS:
+            self.set_track_()
+        self.Track_Method = "track"
 
     def track_son(self):
-        '''由于采用多线程，这里必须等待设置完成后才能开始跟踪，故需要建立子函数'''
         dirname = QFileDialog.getExistingDirectory(None, "选择要保存的track xml文件夹", "./")
         if dirname != "":
             self.track_dir = dirname
-            self.paticle_track = track(self.defaultSaveDir, self.track_dir, Method=self.SubImg_method, T=self.SubImg_T)
+            self.paticle_track = track(self.defaultSaveDir, self.track_dir,
+                                       L_limit=self.L_limit,
+                                       Frame_limit=self.Frame_limit,
+                                       Method=self.SubImg_method,
+                                       T=self.SubImg_T)
             from libs.prograssbar import proBar
             self.proBar = proBar("Track")
-            self.paticle_track.progressBarValue.connect(self.proBar.set_value)
-            self.proBar.quick_sig.connect(self.paticle_track.set_quick_flag)
-            self.paticle_track.after_track.connect(self.after_track)
+            self.paticle_track.progressBarValue.connect(self.proBar.set_value)  # 跟踪时的信号
+            self.proBar.quick_sig.connect(self.paticle_track.set_quick_flag)  # 停止信号
+            self.paticle_track.after_track.connect(self.after_track)  # 跟踪结束信号
             self.paticle_track.start()
             self.proBar.start()
 
@@ -760,9 +820,12 @@ class MainWindow(QMainWindow, WindowMixin):
             Att.Show_()
 
     def update_tracked_(self):
+        if not self.SET_Track_STATUS:
+            self.set_track_()
+        self.Track_Method = "update_track"
 
+    def update_track_son(self):
         directory = QFileDialog.getExistingDirectory(None, "选择跟踪后的XML文件夹", "./")
-
         if directory != "":
             self.track_dir = directory
             from libs.update_track_data_ import update_track_data
@@ -780,7 +843,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.have_tracked != None:
             input = self.have_tracked
             from libs.figure.figure_DwellTime import figure_DwellTime
-            fig = figure_DwellTime(input, self.SubImg_method)
+            fig = figure_DwellTime(input, self.SubImg_method, self.SubImg_T)
             fig.process_()
         else:
             from libs.attention_Dialog_ import Attention
@@ -793,7 +856,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.have_tracked != None:
             input = self.have_tracked
             from libs.figure.figure_DynamicTrack import figure_DynamicTrack
-            fig = figure_DynamicTrack(input, self.SubImg_method)
+            fig = figure_DynamicTrack(input, self.SubImg_method, self.SubImg_T)
             fig.process_()
         else:
             from libs.attention_Dialog_ import Attention

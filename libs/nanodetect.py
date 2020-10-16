@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 class detect(QThread):
     progressBarValue = pyqtSignal(int)
 
-    def __init__(self, model_path, config_path, defaultSaveDir, dirname, parent=None):
+    def __init__(self, model_path, config_path, defaultSaveDir, dirname, score, parent=None):
         super(detect, self).__init__()
         config_file = config_path
         checkpoint_file = model_path
@@ -16,6 +16,7 @@ class detect(QThread):
         self.model = init_detector(config_file, checkpoint_file)
         self.defaultSaveDir = defaultSaveDir
         self.dirname = dirname
+        self.score = score
         self.quick_flag = 0
     def __del__(self):
         self.wait()
@@ -40,7 +41,7 @@ class detect(QThread):
                     bbox_result, segm_result = result, None
                 bboxes = np.vstack(bbox_result)
                 scores = bboxes[:, -1]
-                inds = scores > 0.3
+                inds = scores > self.score
                 bboxes = bboxes[inds, :]
                 temp = []
                 for bbox in bboxes:

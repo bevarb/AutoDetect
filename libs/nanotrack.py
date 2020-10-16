@@ -1,7 +1,7 @@
 import os
 import math
 import numpy as np
-from  libs.read_bbox import read_bbox
+from libs.read_bbox import read_bbox
 import xml.dom.minidom
 import cv2 as cv
 from PyQt5.QtCore import *
@@ -9,18 +9,20 @@ from libs.pascal_voc_io import PascalVocWriter
 class track(QThread):
     progressBarValue = pyqtSignal(int)
     after_track = pyqtSignal(int)
-    def __init__(self, xml_dir, track_xml_dir, Method=0, T=500, parent=None):
+    def __init__(self, xml_dir, track_xml_dir, L_limit=20, Frame_limit=5, Method=0, T=500, parent=None):
         super(track, self).__init__()
-        self.SubImg_T = T
-        self.Method = Method
+        self.SubImg_T = T  # 减背景的间隔
+        self.Method = Method  # 跟踪的方法
+        self.L_limit = L_limit  # 前后两帧相同particle之间的中心距离
+        self.Frame_limit = Frame_limit  # 同一个particle多长时间没有更新的限制
 
         self.xml_dir = xml_dir
         self.dir = os.listdir(self.xml_dir)
         self.dir = sorted(self.dir, key=lambda x: int(x.split(".")[0]))
         self.SubImg_Step = int(self.dir[1].split(".")[0]) - int(self.dir[0].split(".")[0])
-        self.xml = [self.xml_dir + "/" + di for di in self.dir]
+        self.xml = [self.xml_dir + "/" + di for di in self.dir]  # 检测后的标记文件
 
-        self.track_xml_dir = track_xml_dir
+        self.track_xml_dir = track_xml_dir  # 跟踪后的标记文件
 
         self.bboxs = [read_bbox.read(x) for x in self.xml]
         self.have_tracked = []  # 类似一个temp，主要将正在追踪的粒子放入，每帧都会对未放入新粒子的Particle进行计数，超过5则算跟踪结束
@@ -35,36 +37,36 @@ class track(QThread):
            对一帧处理结束要给所有的正在追踪Particle + 1，而之前每次放入新的Particle轨迹会初始化其数值
         '''
         flag = 0
-        for i in range(len(self.bboxs)):
+        for i in range(len(self.bboxs)):  # 每一个图片
 
-            for j in range(len(self.bboxs[i])):
+            for j in range(len(self.bboxs[i])):  # 判断
                 bbox = self.bboxs[i][j]
-                if len(bbox) == 5:
+                if len(bbox) == 5:  # 框的参数必须为5
                     self.search(i, j, bbox)
             if len(self.have_tracked) > 0:
+                # TODO：这里后面需要修改，将两种方法合并为一种
+                win_no_nano = self.Frame_limit
                 if self.Method == 0:  # 减第一帧所用的track
-                    for k in range(len(self.have_tracked)):
-                        frame = int(self.dir[i].split(".")[0])
-
+                    for k in range(len(self.have_tracked)):  # 对已经跟踪的类进行比较
                         if self.have_tracked[k][0][2] != 'OVER':
-                            if self.have_tracked[k][0][2] < 5:
+                            if self.have_tracked[k][0][2] < win_no_nano:
                                 self.have_tracked[k][0][2] += 1
                             # else:
                             #     self.have_tracked[k][0][2] = 'OVER'
-                            elif (self.have_tracked[k][0][2] >= 5) and (frame % self.SubImg_T != 0):
+                            elif (self.have_tracked[k][0][2] >= win_no_nano) and (self.have_tracked[k][-1][0] % self.SubImg_T != 0):
                                 self.have_tracked[k][0][2] = 'OVER'
-                elif self.Method == 1:  # 减前一帧所用的track
+                elif self.SubImg_T == 1:  # 减前一帧所用的track
                     for k in range(len(self.have_tracked)):
                         if len(self.have_tracked[k]) == 3:  # 里面只有第一帧和最后一帧
                             self.have_tracked[k][0][2] = 'OVER'
-
+            # 进度条的加载
             flag += 1
             if self.quick_flag == 1:
                 break
-
             prograssbar_value = round(flag / len(self.bboxs), 2) * 100
             self.progressBarValue[int].emit(int(prograssbar_value))
 
+        # 将跟踪后的写入
         for i in range(len(self.bboxs)):
             newbbox = self.bboxs[i]
             name = int(self.dir[i].split(".")[0])
@@ -82,7 +84,7 @@ class track(QThread):
 
         flag = -1  # 用来标志一个新的bbox是否被分入以前的类，如果没有则根据此flag重新创建一类
         if len(self.have_tracked) == 0:  # 当have_tracked里面没有内容时新建第一个
-            self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id]])
+            self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id, bbox[0]]])
             self.xml_modify(frame, box_id, 0)
         else:
             for i in range(len(self.have_tracked)):  # 当have_tracked里面有内容时进行寻找，寻找到则将flag设置为1，并添加到have_tracked
@@ -92,18 +94,25 @@ class track(QThread):
                     temp = self.have_tracked[i][0]
                     dist = self.distEclud(central, temp)
 
-                    if dist < 30:
-                        flag = 1
+                    if dist < self.L_limit:
+                        name = self.bboxs[frame][box_id][0]
+                        if (self.have_tracked[i][-1][0] % self.SubImg_T == 0) and (name not in ["NONE", "None", "none"]):
+                            # print(self.have_tracked[i][-1][0])
+                            # print("break", frame, self.have_tracked[i][-1][0], name)
+                            pass   # 如果跟踪到了刷新帧，而且名字也不包含none，那么就break重新创建
+                        # elif (self.have_tracked[i][-1][0] % self.SubImg_T != 0) or (name in ["NONE", "None", "none"]):
+                        else:
+                            flag = 1  # 如果不在刷新帧，或者在刷新帧但是名字包含none，那么就归为一类
 
-                        self.have_tracked[i].append([int(self.dir[frame].split(".")[0]), box_id])
+                            self.have_tracked[i].append([int(self.dir[frame].split(".")[0]), box_id, bbox[0]])
 
-                        self.update_mass_central(i)
-                        self.xml_modify(frame, box_id, i)
-                        break
+                            self.update_mass_central(i)
+                            self.xml_modify(frame, box_id, i)
+                            break
 
             if flag == -1:  # flag == -1说明have_tracked里面没有能归为一类的类，这时自创一类
                # print(frame, 'dist too long')
-                self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id]])
+                self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id, bbox[0]]])
                 self.xml_modify(frame, box_id, len(self.have_tracked) - 1)
 
     def update_mass_central(self, ID):
@@ -152,7 +161,7 @@ class track(QThread):
         elif len(self.have_tracked[ID][0]) == 4:
             self.bboxs[frame][box_id][0] = "NONE" + "__ID:" + str(ID)
         else:
-            self.bboxs[frame][box_id][0] = "__ID:" + str(ID)
+            self.bboxs[frame][box_id][0] = "ID:" + str(ID) + "(%s)" % name
 
 
     def over_tracked(self):
@@ -160,5 +169,3 @@ class track(QThread):
 
     def set_quick_flag(self, i):
         self.quick_flag = i
-
-
