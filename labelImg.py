@@ -41,6 +41,7 @@ from libs.colorDialog import ColorDialog
 from libs.labelFile import LabelFile, LabelFileError
 from libs.toolBar import ToolBar
 from libs.pascal_voc_io import PascalVocReader
+from libs.pascal_voc_io import PascalVocWriter
 from libs.pascal_voc_io import XML_EXT
 from libs.yolo_io import YoloReader
 from libs.yolo_io import TXT_EXT
@@ -49,8 +50,12 @@ from libs.hashableQListWidgetItem import HashableQListWidgetItem
 from libs.nanodetect import detect
 from libs.nanotrack import track
 from libs.read_bbox import read_bbox
-__appname__ = 'labelImg'
+__appname__ = 'Auto-Particle'
 
+'''
+    self.defaultSaveDir     默认的XML文件夹地址
+    self.dirname            默认的图片文件夹地址
+'''
 
 class WindowMixin(object):
 
@@ -370,6 +375,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.figure_DynamicTrack_Action = QAction(QIcon('resources/icons/open.png'), '&Figure Dynamic Tracking', self)
         self.save_DwellResult_Action = QAction(QIcon('resources/icons/open.png'), '&save Dwell result', self)
         self.save_DynamicResult_Action = QAction(QIcon('resources/icons/open.png'), '&save Dynamic result', self)
+
         self.get_SubImg_Action.triggered.connect(self.get_SubImg_)
         self.detect_Action.triggered.connect(self.detect_)
         self.track_Action.triggered.connect(self.track_)
@@ -413,10 +419,17 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Improved Plan
         self.Improved_Menu = self.menuBar().addMenu('&Improved')
+
         self.Improved_Action = QAction(QIcon('resources/icons/open.png'), '&Improved Plan', self)
         self.Improved_Action.setShortcut("ctrl+v")
         self.Improved_Action.triggered.connect(self.Improved_Plan_)
+
+        self.merge_Action = QAction(QIcon('resources/icons/open.png'), '&Merge', self)
+        self.merge_Action.setShortcut("ctrl+m")
+        self.merge_Action.triggered.connect(self.Merge)
+
         self.Improved_Menu.addAction(self.Improved_Action)
+        self.Improved_Menu.addAction(self.merge_Action)
 
         # Auto saving : Enable auto saving if pressing next
         self.autoSaving = QAction(getStr('autoSaveMode'), self)
@@ -675,26 +688,30 @@ class MainWindow(QMainWindow, WindowMixin):
     def set_SubImg_(self):
         # 设置减图片的窗口
         from libs.setting.set_SubImg import set_SubImg
-        self.set_SubImg = set_SubImg()
+        self.set_SubImg = set_SubImg(
+                                    method=self.SubImg_method,
+                                     T=self.SubImg_T,
+                                     Flag=self.SubImg_Flag,
+                                     Flag_Num=self.SubImg_Num)
         self.set_SubImg.set_SubImg_sig.connect(self.receive_SubImg_sig)
         self.set_SubImg.show_()
 
-    def receive_SubImg_sig(self, method, T, Step, mean_Step, Flag, Num, is_mean, is_32Bit, is_reverse):
+    def receive_SubImg_sig(self, method, T, Step, mean_Step, gamma, Flag, Num, is_mean, is_32Bit, is_reverse):
         # 接收信号，来自subImg的窗口
         self.SubImg_method = method
         self.SubImg_T = T
         self.SubImg_Step = Step
         self.SubImg_mean_Step = mean_Step
-        self.SubImg_Flag =Flag
+        self.SubImg_gamma = gamma
+        self.SubImg_Flag = Flag
         self.SubImg_Num = Num
         self.SubImg_mean = is_mean
         self.SubImg_if_32 = is_32Bit
         self.SubImg_if_reverse = is_reverse
 
-
-
     SubImg_method = 0
-    SubImg_T = 500
+    SubImg_gamma = -1
+    SubImg_T = 100
     SubImg_Step = 1
     SubImg_mean_Step = 1
     SubImg_Flag = "_"
@@ -703,22 +720,27 @@ class MainWindow(QMainWindow, WindowMixin):
     SubImg_if_reverse = 0
 
     def get_SubImg_(self):
-        '''TODO:增加设置栏目，可以更改更新数量以及'''
-        directory = QFileDialog.getExistingDirectory(None, "选择raw数据文件夹", "./")
-        self.Raw_Dir = directory
-        dirname = QFileDialog.getExistingDirectory(None, "选择要保存的clear文件夹", "./")
-        self.dirname = dirname
-        if dirname != "":
+        '''TODO:添加一个小窗口，显示目前的raw_dir，右边添加一个按钮“...”，可以添加新的路径，
+        如果没有raw_dir，则不能点击确定'''
+        raw_dir = QFileDialog.getExistingDirectory(None, "选择raw数据文件夹", "./")
+        self.Raw_Dir = raw_dir
+
+        if raw_dir != "":
+            # 新建一个新的clear文件夹
+            clear_dir = "/".join(self.Raw_Dir.split("/")[:len(raw_dir) - 2]) + "/clear"  # 列表[begain:over]是可以到over的
+            os.makedirs(clear_dir, exist_ok=True)
+            self.dirname = clear_dir
             from libs.get_ClearImg_ import get_ClearImg
             if self.Raw_Dir == None:
                 pass
             else:
-                self.get_ClearImg = get_ClearImg(self.Raw_Dir,
-                                                 self.dirname,
-                                                 self.SubImg_method,
-                                                 self.SubImg_T,
-                                                 self.SubImg_Step,
-                                                 self.SubImg_mean_Step,
+                self.get_ClearImg = get_ClearImg(source_dir=self.Raw_Dir,
+                                                 save_dir=self.dirname,
+                                                 method=self.SubImg_method,
+                                                 T=self.SubImg_T,
+                                                 Step=self.SubImg_Step,
+                                                 mean_Step=self.SubImg_mean_Step,
+                                                 gama=self.SubImg_gamma,
                                                  is_mean=self.SubImg_mean,
                                                  Flag=self.SubImg_Flag,
                                                  Num=self.SubImg_Num,
@@ -727,37 +749,49 @@ class MainWindow(QMainWindow, WindowMixin):
                 from libs.prograssbar import proBar
                 self.proBar = proBar("Get SubImg")
                 self.get_ClearImg.progressBarValue.connect(self.proBar.set_value)
+                self.get_ClearImg.over_Sig.connect(self.receive_over_subimg)
                 self.proBar.quick_sig.connect(self.get_ClearImg.set_quick_flag)
                 self.get_ClearImg.start()
                 self.proBar.start()
+    def receive_over_subimg(self, over_sig):
+        '''设置当前文件夹目录'''
+        if over_sig == 1:
+            # 创建默认保存的xml文件夹
+            detect_dir = "/".join(self.Raw_Dir.split("/")[:len(self.dirname) - 2]) + "/detect"  # 列表[begain:over]是可以到over的
+            os.makedirs(detect_dir, exist_ok=True)
+            self.defaultSaveDir = detect_dir
+            # 添加跳转，当前目录的图片需要显示
+            self.importDirImages(self.dirname)
 
-    ModelPaths = [["/home/user/wangxu_data/code/2-AutoDetect/AutoDetect/work_dirs/New/Label-3.pth",],
-                  ["work_dirs/90%Detect/latest.pth",]]
+
+    model_path = "/home/user/wangxu_data/code/2-AutoDetect/AutoDetect/work_dirs/New/Label-3.pth"
     model_method = 0
     score = 0.5
+
     def set_Detect_(self):
         from libs.setting.set_Detect import set_Detect
-        self.set_Detect = set_Detect()
+        self.set_Detect = set_Detect(model_path=self.model_path)
         self.set_Detect.set_Detect_sig.connect(self.receive_Detect_sig)
         self.set_Detect.show_()
-    def receive_Detect_sig(self, method, score):
-        self.model_method = method
+    def receive_Detect_sig(self, path, score, is_search_central):
+        self.model_path = path
         self.score = score
+        self.is_search_central = is_search_central
+        print("目前的模型文件为:", self.model_path)
+        print("目前的阈值为:", self.score)
+        print("是否搜索最大值:", self.is_search_central)
 
     def detect_(self):
         '''TODO:增加设置栏目，可以更改配置文件和模型文件'''
-        # filt = 'modelFile(*.pth)'
-        # model_name, filtUsed = QFileDialog.getOpenFileName(None, "选择文件", "C:/", filt)
         self.config_path = "libs/detect/configs/faster_rcnn_r50_fpn_1x.py"
         # self.model_path = "work_dirs/90%Detect/latest.pth"
         from libs.prograssbar import proBar
         self.proBar = proBar("Detect")
         from libs.new_nanodetect import yolo_detect
-        model_path = self.ModelPaths[self.model_method][0]
-        if self.model_method == 0:
-            self.nano = yolo_detect(model_path, self.config_path, self.defaultSaveDir, self.dirname, self.score)
-        elif self.model_method == 1:
-            self.nano = detect(model_path, self.config_path, self.defaultSaveDir, self.dirname, self.score)
+        model_path = self.model_path
+        self.nano = yolo_detect(model_path, self.config_path, self.defaultSaveDir, self.dirname, self.score,
+                                is_search_central=self.is_search_central,
+                                gamma=self.SubImg_gamma)
         self.nano.progressBarValue.connect(self.proBar.set_value)
         self.proBar.quick_sig.connect(self.nano.set_quick_flag)
         self.proBar.start()
@@ -770,12 +804,13 @@ class MainWindow(QMainWindow, WindowMixin):
         self.L_limit = L_limit
         self.Frame_limit = Frame_limit
         self.SubImg_T = T
+        self.SET_Track_STATUS = True
         if self.Track_Method == "track":
             self.track_son()
         else:
             self.update_track_son()
 
-    SET_Track_STATUS = False  # 是否设置跟踪的状态记录，如果为False，则启动设置
+    # SET_Track_STATUS = False  # 是否设置跟踪的状态记录，如果为False，则启动设置
     Track_Method = "track"
 
     def set_track_(self):
@@ -788,8 +823,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def track_(self):
         '''由于采用多线程，这里必须等待设置完成后才能开始跟踪，故需要建立子函数'''
-        if not self.SET_Track_STATUS:
-            self.set_track_()
+        self.set_track_()
         self.Track_Method = "track"
 
     def track_son(self):
@@ -820,10 +854,10 @@ class MainWindow(QMainWindow, WindowMixin):
             Att.Show_()
 
     def update_tracked_(self):
-        if not self.SET_Track_STATUS:
-            self.set_track_()
+        self.set_track_()
         self.Track_Method = "update_track"
 
+    track_dir = None
     def update_track_son(self):
         directory = QFileDialog.getExistingDirectory(None, "选择跟踪后的XML文件夹", "./")
         if directory != "":
@@ -912,6 +946,41 @@ class MainWindow(QMainWindow, WindowMixin):
                 shutil.copyfile(current_tif_path, "Improved/tifs/%d.tif" % new_name)
                 shutil.copyfile(current_xml_path, "Improved/xmls/%d.xml" % new_name)
                 self.change_filePath = current_tif_path
+
+    def Merge(self):
+        '''为了合并没有分为同类的颗粒群'''
+        if self.have_tracked != None:
+            from libs.setting.set_merge import set_Merge
+            set_Merge = set_Merge()
+            set_Merge.show_()
+            set_Merge.set_Merge_sig.connect(self.receive_Merge_sig)
+        else:
+            from libs.attention_Dialog_ import Attention
+            Att = Attention(self.OPEN_UPDATETRACK_TEXT)
+            Att.open_updateTrack_Sig[str].connect(self.receive_click_update_track)
+            Att.Show_()
+
+    def receive_Merge_sig(self, class1, class2):
+        '''接收信号，并且执行合并'''
+        ID1 = class1
+        ID2 = class2
+        data2 = self.have_tracked[ID2]
+        for i in range(1, len(data2)):
+            self.have_tracked[ID1].append(data2[i])
+            Frame = data2[i][0]
+            bbox_num = data2[i][1]
+            path = self.defaultSaveDir + "/%s.xml" % str(Frame)
+            # 修改并且写入文件
+            bboxs = read_bbox.read(path)
+            bboxs[bbox_num][0] = "ID:%d|%s" % (ID1, data2[i][2])
+            xmlwriter = PascalVocWriter("VOC2007", "%d.tif" % int(Frame), [523, 525, 1])
+            for box in bboxs:
+                xmlwriter.addBndBox(box[1], box[2], box[3], box[4], box[0], "0")
+            xmlwriter.save(path)
+        # 都添加且修改xml文件后，需要处理原来的数据
+        self.have_tracked[ID2] = [[0, 0, "have_move"]]
+
+
 
 
     def beginner(self):
@@ -1002,6 +1071,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     # Tzutalin 20160906 : Add file list and dock to move faster
     def fileitemDoubleClicked(self, item=None):
+        # 双击文件列表中的文件名，可直接显示
         currIndex = self.mImgList.index(ustr(item.text()))
         if currIndex < len(self.mImgList):
             filename = self.mImgList[currIndex]
@@ -1052,17 +1122,21 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.shapeFillColor.setEnabled(selected)
 
     def addLabel(self, shape):
-        shape.paintLabel = self.displayLabelOption.isChecked()
-        item = HashableQListWidgetItem(shape.label)
-        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-        item.setCheckState(Qt.Checked)
-        item.setBackground(generateColorByText(shape.label))
-        self.itemsToShapes[item] = shape
-        self.shapesToItems[shape] = item
-        self.labelList.addItem(item)
-        for action in self.actions.onShapesPresent:
-            action.setEnabled(True)
-        self.updateComboBox()
+        '''Add Label, Only shape != None
+        添加标签，如果shape != None才执行
+        '''
+        if shape != None:
+            shape.paintLabel = self.displayLabelOption.isChecked()
+            item = HashableQListWidgetItem(shape.label)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            item.setBackground(generateColorByText(shape.label))
+            self.itemsToShapes[item] = shape
+            self.shapesToItems[shape] = item
+            self.labelList.addItem(item)
+            for action in self.actions.onShapesPresent:
+                action.setEnabled(True)
+            self.updateComboBox()
 
     def remLabel(self, shape):
         if shape is None:
@@ -1146,32 +1220,33 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.labelFile.save(annotationFilePath, shapes, self.filePath, self.imageData,
                                     self.lineColor.getRgb(), self.fillColor.getRgb())
             print('Image:{0} -> Annotation:{1}'.format(self.filePath, annotationFilePath))
-            if self.have_tracked != None:
-                # 获取修改xml文件的名字，检查这次名字里是否有NONE
-                import xml.dom.minidom
-                dom = xml.dom.minidom.parse(annotationFilePath)
-                root = dom.documentElement
-                names = root.getElementsByTagName('name')
-                for i in range(len(names)):
-                    name = names[i].firstChild.data
-                    # 如果名字有NONE，那么从所有的标记类中寻找
-                    if name in ["None", "NONE", "none"]:
-                        frame = annotationFilePath.split('/')[-1].split(".")[0]
-                        box_id = i
-                        for tra in self.have_tracked:
-                            if [int(frame), box_id] in tra:
-                                    for i in range(1, len(tra)):
-                                        # 寻找到对应类，对从该frame开始，后面的frame全部标记为NONE
-                                        if tra[i][0] >= int(frame):
-                                            xml_path = self.track_dir + "/" + str(tra[i][0]) + ".xml"
-                                            dom = xml.dom.minidom.parse(xml_path)
-                                            root = dom.documentElement
-                                            names = root.getElementsByTagName('name')
-                                            names[tra[i][1]].firstChild.data = "NONE"
-                                            with open(xml_path, 'w') as fh:
-                                                dom.writexml(fh)
-                                            tra[i].append("NONE")
-                                    tra[0].append("Have None")
+            # if self.have_tracked != None:
+            #     dir = self.defaultSaveDir
+            #     # 获取修改xml文件的名字，检查这次名字里是否有NONE
+            #     import xml.dom.minidom
+            #     dom = xml.dom.minidom.parse(annotationFilePath)
+            #     root = dom.documentElement
+            #     names = root.getElementsByTagName('name')
+            #     for i in range(len(names)):
+            #         name = names[i].firstChild.data
+            #         # 如果名字有NONE，那么从所有的标记类中寻找
+            #         if name in ["None", "NONE", "none"]:
+            #             frame = annotationFilePath.split('/')[-1].split(".")[0]
+            #             box_id = i
+            #             for tra in self.have_tracked:
+            #                 if [int(frame), box_id] in tra:
+            #                         for i in range(1, len(tra)):
+            #                             # 寻找到对应类，对从该frame开始，后面的frame全部标记为NONE
+            #                             if tra[i][0] >= int(frame):
+            #                                 xml_path = self.track_dir + "/" + str(tra[i][0]) + ".xml"
+            #                                 dom = xml.dom.minidom.parse(xml_path)
+            #                                 root = dom.documentElement
+            #                                 names = root.getElementsByTagName('name')
+            #                                 names[tra[i][1]].firstChild.data = "NONE"
+            #                                 with open(xml_path, 'w') as fh:
+            #                                     dom.writexml(fh)
+            #                                 tra[i].append("NONE")
+            #                         tra[0].append("Have None")
             return True
         except LabelFileError as e:
             self.errorMessage(u'Error saving label data', u'<b>%s</b>' % e)
@@ -1465,9 +1540,9 @@ class MainWindow(QMainWindow, WindowMixin):
         w = self.centralWidget().width() - 2.0
         return w / self.canvas.pixmap.width()
 
-    def closeEvent(self, event):
-        if not self.mayContinue():
-            event.ignore()
+    def closeEvent(self, QCloseEvent):
+        # if not self.mayContinue():
+        #     event.ignore()
         settings = self.settings
         # If it loads images from dir, don't load it at the begining
         if self.dirname is None:
@@ -1482,6 +1557,7 @@ class MainWindow(QMainWindow, WindowMixin):
         settings[SETTING_FILL_COLOR] = self.fillColor
         settings[SETTING_RECENT_FILES] = self.recentFiles
         settings[SETTING_ADVANCE_MODE] = not self._beginner
+        settings[SETTING_Sub_T] = self.SubImg_T
         if self.defaultSaveDir and os.path.exists(self.defaultSaveDir):
             settings[SETTING_SAVE_DIR] = ustr(self.defaultSaveDir)
         else:
@@ -1497,6 +1573,16 @@ class MainWindow(QMainWindow, WindowMixin):
         settings[SETTING_PAINT_LABEL] = self.displayLabelOption.isChecked()
         settings[SETTING_DRAW_SQUARE] = self.drawSquaresOption.isChecked()
         settings.save()
+
+        reply = QMessageBox.question(self,
+                                     'Attention',
+                                     'If you want to exit ?',
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            QCloseEvent.accept()
+        else:
+            QCloseEvent.ignore()
 
     def loadRecent(self, filename):
         if self.mayContinue():
@@ -1528,7 +1614,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if dirpath is not None and len(dirpath) > 1:
             self.defaultSaveDir = dirpath
-
         self.statusBar().showMessage('%s . Annotation will be saved to %s' %
                                      ('Change saved folder', self.defaultSaveDir))
         self.statusBar().show()
@@ -1629,9 +1714,11 @@ class MainWindow(QMainWindow, WindowMixin):
         # Proceding prev image without dialog if having any label
         if self.autoSaving.isChecked():
             if self.defaultSaveDir is not None:
+                # 如果存在则保存文件
                 if self.dirty is True:
                     self.saveFile()
             else:
+                # 如果不存在保存的XML文件则默认打开对话框
                 self.changeSavedirDialog()
                 return
 
@@ -1822,16 +1909,6 @@ class MainWindow(QMainWindow, WindowMixin):
     def toogleDrawSquare(self):
         self.canvas.setDrawingShapeToSquare(self.drawSquaresOption.isChecked())
 
-    def closeEvent(self, QCloseEvent):
-        reply = QMessageBox.question(self,
-                                     'Attention',
-                                     'If you want to exit ?',
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            QCloseEvent.accept()
-        else:
-            QCloseEvent.ignore()
 
 
 

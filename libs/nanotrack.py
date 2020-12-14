@@ -41,7 +41,7 @@ class track(QThread):
 
             for j in range(len(self.bboxs[i])):  # 判断
                 bbox = self.bboxs[i][j]
-                if len(bbox) == 5:  # 框的参数必须为5
+                if len(bbox) == 6:  # 框的参数必须为5
                     self.search(i, j, bbox)
             if len(self.have_tracked) > 0:
                 # TODO：这里后面需要修改，将两种方法合并为一种
@@ -55,10 +55,14 @@ class track(QThread):
                             #     self.have_tracked[k][0][2] = 'OVER'
                             elif (self.have_tracked[k][0][2] >= win_no_nano) and (self.have_tracked[k][-1][0] % self.SubImg_T != 0):
                                 self.have_tracked[k][0][2] = 'OVER'
-                elif self.SubImg_T == 1:  # 减前一帧所用的track
+                elif self.Method == 1:  # 减前一帧所用的track
                     for k in range(len(self.have_tracked)):
-                        if len(self.have_tracked[k]) == 3:  # 里面只有第一帧和最后一帧
-                            self.have_tracked[k][0][2] = 'OVER'
+                        if self.have_tracked[k][0][2] != 'OVER':
+                            if self.have_tracked[k][0][2] < win_no_nano:
+                                self.have_tracked[k][0][2] += 1
+                            if len(self.have_tracked[k]) >= 2 and self.have_tracked[k][0][2] >= 5:  # 里面只有第一帧和最后一帧
+                                if self.have_tracked[k][-1][2] == "debinding":
+                                    self.have_tracked[k][0][2] = 'OVER'
             # 进度条的加载
             flag += 1
             if self.quick_flag == 1:
@@ -73,7 +77,7 @@ class track(QThread):
             filename = "%d.tif" % name
             xmlwriter = PascalVocWriter("VOC2007", filename, [523, 525, 1])
             for box in newbbox:
-                xmlwriter.addBndBox(box[1], box[2], box[3], box[4], box[0], "0")
+                xmlwriter.addBndBox(box[1], box[2], box[3], box[4], box[0], "0", box[5])
             xmlwriter.save(self.track_xml_dir + "/" + str(name) + ".xml")
         self.after_track[int].emit(1)
 
@@ -84,35 +88,63 @@ class track(QThread):
 
         flag = -1  # 用来标志一个新的bbox是否被分入以前的类，如果没有则根据此flag重新创建一类
         if len(self.have_tracked) == 0:  # 当have_tracked里面没有内容时新建第一个
-            self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id, bbox[0]]])
+            self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id, bbox[0], bbox[5]]])
             self.xml_modify(frame, box_id, 0)
         else:
             for i in range(len(self.have_tracked)):  # 当have_tracked里面有内容时进行寻找，寻找到则将flag设置为1，并添加到have_tracked
                                                      # 更新中心位置，修改对应的Box名称
-               # print(i, self.have_tracked)
                 if self.have_tracked[i][0][2] != 'OVER':
                     temp = self.have_tracked[i][0]
                     dist = self.distEclud(central, temp)
-
                     if dist < self.L_limit:
                         name = self.bboxs[frame][box_id][0]
-                        if (self.have_tracked[i][-1][0] % self.SubImg_T == 0) and (name not in ["NONE", "None", "none"]):
-                            # print(self.have_tracked[i][-1][0])
-                            # print("break", frame, self.have_tracked[i][-1][0], name)
+                        if (self.have_tracked[i][-1][0] % self.SubImg_T == 0) \
+                                                and (name not in ["NONE", "None", "none"])\
+                                            and self.Method == 0:
                             pass   # 如果跟踪到了刷新帧，而且名字也不包含none，那么就break重新创建
-                        # elif (self.have_tracked[i][-1][0] % self.SubImg_T != 0) or (name in ["NONE", "None", "none"]):
                         else:
                             flag = 1  # 如果不在刷新帧，或者在刷新帧但是名字包含none，那么就归为一类
 
-                            self.have_tracked[i].append([int(self.dir[frame].split(".")[0]), box_id, bbox[0]])
+                            self.have_tracked[i].append([int(self.dir[frame].split(".")[0]), box_id, bbox[0], bbox[5]])
 
                             self.update_mass_central(i)
                             self.xml_modify(frame, box_id, i)
                             break
+            # # 先遍历一遍，得到最短距离，其最短距离的ID
+            # min_info = []
+            # for i in range(len(self.have_tracked)):  # 当have_tracked里面有内容时进行寻找，寻找到则将flag设置为1，并添加到have_tracked
+            #                                          # 更新中心位置，修改对应的Box名称
+            #    # print(i, self.have_tracked)
+            #     if self.have_tracked[i][0][2] != 'OVER':
+            #         temp = self.have_tracked[i][0]
+            #         dist = self.distEclud(central, temp)
+            #         min_info.append([dist, i])
+            # min_info = sorted(min_info, key=lambda x: x[0])
+            # # 按照排序后的距离进行循环，看是否有能够满足条件的
+            # for min_L, min_ID in min_info:
+            #     if min_L < self.L_limit:
+            #         name = self.bboxs[frame][box_id][0]
+            #         # 这个if的用法是，在刷新帧的位置有一些Particle，然后后面又出现了新的比较像的颗粒，那是应该重新创建的，而不是归为一类
+            #         if (self.have_tracked[min_ID][-1][0] % self.SubImg_T == 0) \
+            #                 and (name not in ["NONE", "None", "none"])\
+            #                 and self.Method == 0:
+            #             pass
+            #         elif frame == self.have_tracked[min_ID][-1][0]:
+            #             # 如果当前的Frame与跟踪的这个ID最后的Frame一样，那也要跳过，毕竟同一帧不能出现两个ID
+            #             pass
+            #         else:
+            #             flag = 1  # 如果不在刷新帧，或者在刷新帧但是名字包含none，那么就归为一类
+            #             self.have_tracked[min_ID].append([int(self.dir[frame].split(".")[0]), box_id, bbox[0]])
+            #             # self.update_mass_central(i)
+            #             self.have_tracked[min_ID][0][0:3] = central
+            #             self.xml_modify(frame, box_id, min_ID)
+            #             break
+            #     else:
+            #         break
 
             if flag == -1:  # flag == -1说明have_tracked里面没有能归为一类的类，这时自创一类
                # print(frame, 'dist too long')
-                self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id, bbox[0]]])
+                self.have_tracked.append([central, [int(self.dir[frame].split(".")[0]), box_id, bbox[0], bbox[5]]])
                 self.xml_modify(frame, box_id, len(self.have_tracked) - 1)
 
     def update_mass_central(self, ID):
@@ -161,7 +193,7 @@ class track(QThread):
         elif len(self.have_tracked[ID][0]) == 4:
             self.bboxs[frame][box_id][0] = "NONE" + "__ID:" + str(ID)
         else:
-            self.bboxs[frame][box_id][0] = "ID:" + str(ID) + "(%s)" % name
+            self.bboxs[frame][box_id][0] = "ID:" + str(ID) + "|%s" % name + "|%s" % self.bboxs[frame][box_id][5]
 
 
     def over_tracked(self):

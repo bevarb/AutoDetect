@@ -9,7 +9,7 @@ from PIL import Image
 class yolo_detect(QThread):
     progressBarValue = pyqtSignal(int)
 
-    def __init__(self, model_path, config_path, defaultSaveDir, dirname, score, parent=None):
+    def __init__(self, model_path, config_path, defaultSaveDir, dirname, score, is_search_central, gamma, parent=None):
         super(yolo_detect, self).__init__()
         config_file = config_path
         checkpoint_file = model_path
@@ -22,13 +22,18 @@ class yolo_detect(QThread):
             "confidence": 0.5,
             "cuda": True
         }
-
+        self.is_search_central = is_search_central
+        self.gamma = gamma
+        if self.gamma == -1:
+            print("读取info文件中的gamma,最好再发送一个信号")
+        print(self.gamma)
         self.yolo4 = YOLO(_defaults)
         self.defaultSaveDir = defaultSaveDir
         self.dirname = dirname
         self.score = score
         self.quick_flag = 0
         self.classes = ["binding", "debinding"]
+        self.central_intensity = []
     def __del__(self):
         self.wait()
 
@@ -52,13 +57,16 @@ class yolo_detect(QThread):
                 # print(np.array(image).dtype)
                 bboxs = self.yolo4.detect_image(image)
                 # print(bboxs)
-
-                newbboxs = self.search_central(img, bboxs)
-
+                # 寻找最大值
+                if self.is_search_central == 1:
+                    newbboxs = self.search_central(img, bboxs)
+                else:
+                    newbboxs = bboxs
                 filename = id + ".tif"
                 xmlwriter = PascalVocWriter("VOC2007", filename, img_size)
                 for box in newbboxs:
-                    xmlwriter.addBndBox(box[0], box[1], box[2], box[3], self.classes[int(box[-1])], "0")
+                    intensity = self.get_intensity(img, box)  # 获取强度值
+                    xmlwriter.addBndBox(box[0], box[1], box[2], box[3], self.classes[int(box[-1])], "0", intensity)
                 xmlwriter.save(self.defaultSaveDir + "/" + id + ".xml")
                 flag += 1
                 if self.quick_flag == 1:
@@ -68,6 +76,24 @@ class yolo_detect(QThread):
 
     def set_quick_flag(self, i):
         self.quick_flag = i
+
+    def get_intensity(self, img, box):
+        '''获取中心强度值，并不是直接读取，而是根据预处理反过来到原来的数据'''
+        img = np.array(img)
+        central_x, central_y = int((box[1] + box[3]) / 2), int((box[0] + box[2]) / 2)
+        L = 2
+        x_min, y_min, x_max, y_max = central_x - L, central_y - L, central_x + L, central_y + L
+        data = img[x_min:x_max, y_min:y_max].astype(np.int32)
+        # print(data)
+        score = 32500
+        data = data - score
+        # print(data)
+        data[data[:, :] < 0] = (-1) * np.power(np.abs(data[data[:, :] < 0]) / score, 1 / self.gamma) * score
+        data[data[:, :] > 0] = np.power(np.abs(data[data[:, :] > 0]) / score, 1 / self.gamma) * score
+        # print(data)
+        data = data / 2  #
+        intensity = np.mean(data)  # 获取均值
+        return intensity
 
     def search_central(self, img, bboxs):
         '''对检测后的数据寻找最亮点或者最暗点，然后再根据这个点生成新的标准框'''

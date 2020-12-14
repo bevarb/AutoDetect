@@ -9,6 +9,7 @@ class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.
         self.ymin = ""
         self.xmax = ""
         self.ymax = ""
+        self.intensity = ""
         self.temp = []
         self.box = []
 
@@ -30,6 +31,8 @@ class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.
             self.temp.append(int(self.xmax))
         elif name == "ymax":
             self.temp.append(int(self.ymax))
+        elif name == "intensity":
+            self.temp.append(float(self.intensity))
         elif name == "object":
             self.box.append(self.temp)
             self.temp = []
@@ -49,11 +52,13 @@ class Box_Handler(sax.ContentHandler):  # 定义自己的handler类，继承sax.
             self.xmax = content
         elif self.CurrentData == "ymax":
             self.ymax = content
+        elif self.CurrentData == "intensity":
+            self.intensity = content
 
 class read_bbox():
 
     def read(path):
-        '''读取xml文件，并返回box的列表[[name,xmin,ymin,xmax,ymax], [name,xmin,ymin,xmax,ymax]]'''
+        '''读取xml文件，并返回box的列表[[name,xmin,ymin,xmax,ymax, intensity], [name,xmin,ymin,xmax,ymax, intensity]]'''
         parser = sax.make_parser()  # 创建一个 XMLReader
         parser.setFeature(sax.handler.feature_namespaces, 0)  # turn off namepsaces
         Handler = Box_Handler()  # 重写 ContextHandler

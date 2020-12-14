@@ -9,7 +9,7 @@ class figure_DwellTime(QThread):
 
     def __init__(self, over_tracked, Method, T, parent=None):
         super(figure_DwellTime, self).__init__()
-        self.overtracked = over_tracked
+        self.overtracked = over_tracked  # 跟踪后的所有信息，从1开始，0为字节头
         self.Method = Method
         self.SubImg_T = T
 
@@ -28,7 +28,7 @@ class figure_DwellTime(QThread):
             #             over_frame = all[i][j][0]
             #             break
             if self.Method == 1 and len(all[i]) == 2:
-                continue  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+                continue  # 如果逐帧相减且只有起始点，则认为该点一直存在
             elif self.Method == 0 and all[i][-1][2] == "binding" and all[i][-1][0] % self.SubImg_T == 0:
                 continue  # 如果减第一帧，该轨迹的最后一帧是T的整数倍，那就认为该粒子还存在
 
@@ -103,7 +103,7 @@ class figure_DwellTime(QThread):
         for i in range(2, len(data)):
             index = -1 * i
             if data[index][2] == "binding" and data[index + 1][2] == "debinding":
-                return index
+                return index + 1
         if abs(index) >= len(data):
             return -1
         return -1

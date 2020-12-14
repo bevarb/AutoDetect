@@ -77,6 +77,7 @@ class set_Track(QDialog):
     def cob_change(self, text):
         if text == 1:
             self.LineEdit23.setText("1")
+            self.LineEdit22.setText("5")
 
 
 

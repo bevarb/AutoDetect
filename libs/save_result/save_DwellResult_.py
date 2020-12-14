@@ -25,12 +25,13 @@ class save_DwellResult_():
             T = 1
         Data.append(["处理方法:", method_name])
         Data.append(["更新周期", T])
-        Data.append(["ID", "First Frame", "Last Frame", "Dwell Time"])
+        Data.append(["ID", "First Frame", "Last Frame", "Dwell Time", "Intensity"])
         # 开始将数据记录
         for i in range(len(all)):
             temp = []
 
             start_frame = all[i][1][0]
+            intensity = all[i][1][3]
             over_frame = all[i][-1][0]
             if all[i][-1][2] == "debinding":
                 over_index = self.search_debinding(all[i])
@@ -45,7 +46,7 @@ class save_DwellResult_():
 
             if self.parameter[0] == 1 and len(all[i]) == 2:
                 pass
-                # over_frame = self.max_Frame  # 如果逐帧相减且只有起始点，则认为该点一直存在，将其走掉的frame设为最后一个frame
+                # over_frame = self.max_Frame  # 如果逐帧相减且只有起始点，则认为该点一直存在
             elif self.parameter[0] == 0 and all[i][-1][2] == "binding" and all[i][-1][0] % T == 0:
                 pass
                 # over_frame = self.max_Frame  # 如果减第一帧，该轨迹的最后一帧是500的整数倍，那就认为该粒子还存在
@@ -54,6 +55,7 @@ class save_DwellResult_():
             temp.append(start_frame)
             temp.append(over_frame)
             temp.append(over_frame - start_frame)
+            temp.append(intensity)
 
             for j in range(len(all[i])):
                 temp.append(all[i][j])
@@ -65,7 +67,8 @@ class save_DwellResult_():
         writer = pd.ExcelWriter(self.save_path)  # 写入Excel文件
         df.to_excel(writer, 'page_1', float_format='%d', index=False)
         worksheet1 = writer.sheets["page_1"]
-        worksheet1.set_column('A:D', 8)
+        worksheet1.set_column('A:F', 10)
+        worksheet1.set_column('G:S', 22)
         writer.save()
         writer.close()
 
@@ -77,7 +80,7 @@ class save_DwellResult_():
         for i in range(2, len(data)):
             index = -1 * i
             if data[index][2] == "binding" and data[index + 1][2] == "debinding":
-                return index
+                return index + 1
         if abs(index) >= len(data):
             return -1
         return -1

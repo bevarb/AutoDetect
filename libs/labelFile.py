@@ -12,8 +12,8 @@ from libs.yolo_io import YOLOWriter
 from libs.pascal_voc_io import XML_EXT
 import os.path
 import sys
-
-
+import numpy as np
+import PIL.Image as Image
 class LabelFileError(Exception):
     pass
 
@@ -28,6 +28,7 @@ class LabelFile(object):
         self.imagePath = None
         self.imageData = None
         self.verified = False
+        self.gamma = 0.4
 
     def savePascalVocFormat(self, filename, shapes, imagePath, imageData,
                             lineColor=None, fillColor=None, databaseSrc=None):
@@ -51,10 +52,30 @@ class LabelFile(object):
             # Add Chris
             difficult = int(shape['difficult'])
             bndbox = LabelFile.convertPoints2BndBox(points)
-            writer.addBndBox(bndbox[0], bndbox[1], bndbox[2], bndbox[3], label, difficult)
+            img = Image.open(imagePath)
+            intensity = self.get_intensity(img, bndbox)
+            writer.addBndBox(bndbox[0], bndbox[1], bndbox[2], bndbox[3], label, difficult, intensity)
 
         writer.save(targetFile=filename)
         return
+
+    def get_intensity(self, img, box):
+        '''获取中心强度值，并不是直接读取，而是根据预处理反过来到原来的数据'''
+        img = np.array(img)
+        central_x, central_y = int((box[1] + box[3]) / 2), int((box[0] + box[2]) / 2)
+        L = 2
+        x_min, y_min, x_max, y_max = central_x - L, central_y - L, central_x + L, central_y + L
+        data = img[x_min:x_max, y_min:y_max].astype(np.int32)
+        # print(data)
+        score = 32500
+        data = data - score
+        # print(data)
+        data[data[:, :] < 0] = (-1) * np.power(np.abs(data[data[:, :] < 0]) / score, 1 / self.gamma) * score
+        data[data[:, :] > 0] = np.power(np.abs(data[data[:, :] > 0]) / score, 1 / self.gamma) * score
+        # print(data)
+        data = data / 2  #
+        intensity = np.mean(data)  # 获取均值
+        return intensity
 
     def saveYoloFormat(self, filename, shapes, imagePath, imageData, classList,
                             lineColor=None, fillColor=None, databaseSrc=None):

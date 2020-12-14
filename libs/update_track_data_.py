@@ -29,26 +29,32 @@ class update_track_data(QThread):
             if len(self.bboxs[i]) != 0:
                 for j in range(len(self.bboxs[i])):
                     name = self.bboxs[i][j][0]
-                    ID = int(name.split("ID:")[-1])
+                    ID = int(name.split("ID:")[-1].split("|")[0])
                     Frame = int(self.dir[i].split(".")[0])
+                    type = self.bboxs[i][j][0].split("|")[1]
+                    central = self.get_central(self.bboxs[i][j])
+                    intensity = self.bboxs[i][j][5]
                     # 如果ID较大，但是have_tracked内的数组没有这么多，则新建多个
                     if len(self.have_tracked) < ID + 1:
                         new_list_num = ID - len(self.have_tracked) + 1
                         for k in range(new_list_num):
                             self.have_tracked.append([[0, 0, 0]])
+                    # 下面是名字中含有NONE，这是之前的，先保留
                     if ("NONE" in name) and (len(self.have_tracked[ID][0]) == 3):
                         self.have_tracked[ID][0].append("Have None")
                         self.have_tracked[ID].append([Frame, j, "NONE__ID:%d" % ID])
-                    elif ("NONE" in name) and (len(self.have_tracked[ID][0]) == 3):
-                        self.have_tracked[ID].append([Frame, j, "NONE__ID:%d" % ID])
-                    else:
-                        self.have_tracked[ID].append([Frame, j])
+                    # 正常的颗粒进行处理，按照ID放入，更新中心距离
+                    self.have_tracked[ID][0][0:2] = central
+                    self.have_tracked[ID].append([Frame, j, type, intensity])
 
         self.after_track[int].emit(2)
 
 
     def over_tracked(self):
         return self.have_tracked, self.bboxs
+
+    def get_central(self, bbox):
+        return (bbox[3]+bbox[1]) // 2, (bbox[4]+bbox[2]) // 2
 
 
 

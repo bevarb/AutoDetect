@@ -1,12 +1,14 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 class set_SubImg(QDialog):
-    set_SubImg_sig = pyqtSignal(int, int, int, int, str, str, int, int, int)
-    def __init__(self, method=0, T=500, Step=1, parent=None):
+    set_SubImg_sig = pyqtSignal(int, int, int, int, float, str, str, int, int, int)
+    def __init__(self, method=0, T=500, Step=1, Flag="_", Flag_Num="-1", parent=None):
         super(set_SubImg, self).__init__()
         self.method = method
         self.T = T
         self.Step = Step
+        self.Flag = Flag
+        self.Flag_Num = Flag_Num
 
 
     def show_(self):
@@ -44,12 +46,16 @@ class set_SubImg(QDialog):
         self.lineedit22 = QLineEdit(str(self.Step))
         lable23 = QLabel("Mean Step：")
         self.lineedit23 = QLineEdit(str(self.Step))
+        lable24 = QLabel("Gamma：")
+        self.lineedit24 = QLineEdit(str(0.4))
         layout2.addWidget(lable21)
         layout2.addWidget(self.lineedit21)
         layout2.addWidget(lable22)
         layout2.addWidget(self.lineedit22)
         layout2.addWidget(lable23)
         layout2.addWidget(self.lineedit23)
+        layout2.addWidget(lable24)
+        layout2.addWidget(self.lineedit24)
         Wid2 = QWidget()
         Wid2.setLayout(layout2)
 
@@ -129,6 +135,7 @@ class set_SubImg(QDialog):
                                          int(self.lineedit21.text()),
                                          int(self.lineedit22.text()),
                                          int(self.lineedit23.text()),
+                                         float(self.lineedit24.text()),
                                          self.lineedit4.text(),
                                          self.lineedit5.text(),
                                          is_mean,
@@ -138,8 +145,8 @@ class set_SubImg(QDialog):
     def cob_change(self, text):
         if text == 1:
             self.lineedit21.setText("1")
-            self.lineedit22.setText("3")
-            self.lineedit23.setText("3")
+            self.lineedit22.setText("5")
+            self.lineedit23.setText("5")
             self.checkbox1.setChecked(True)
 
 
